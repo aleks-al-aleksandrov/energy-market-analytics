@@ -34,6 +34,27 @@ Validation is expanding-window walk-forward with a final holdout that was never 
 Caveat: the holdout has since informed several *design discussions* (e.g. the level-anchored variants), which is why a live,
 pre-gate-closure track record (`reports/live_track_record.csv`) is the intended clean test going forward.
 
+## Battery revenue range (Monte Carlo, `src/montecarlo.py`)
+The battery study settles a forecast-driven schedule at actual prices. To show a range rather than one number, past forecast errors
+are resampled (schedule fixed by the forecast, 7-day blocks so bad regimes persist). The generator was chosen on the CV months only:
+a simpler one that draws error vectors independently of the schedule covered 72 % of days in its 10-90 % range, because realised
+revenue falls systematically short of the revenue expected at forecast prices (the optimiser's curse: the schedule sells where the
+forecast is too high); the slippage generator covers 83 % on CV and **70 % on the holdout**, so the range is too narrow in a regime
+shift and its tails are conservative (4.1 % predicted vs 0.6 % realised daily-loss rate). Scenario-year P5-P95 is about
+EUR 74k-91k per MW-year (median 82k); the back-test realised EUR 87k.
+
+## Re-tests of rejected inputs (`src/retest_optional.py`, weekly)
+Last run 2026-11-03: capacity and fuels, re-run on the current data under the same CV-only rule, still do not help (CV MAE 20.53 and
+20.60 against 20.13 without). Outages remain untestable without leakage: the API returns one revision per document (probe on April 2026:
+22 documents, none with several) and only 1 of 180 required point-in-time snapshot days exist. The script re-runs the outage experiment
+by itself once either precondition is met.
+
+## Access and privacy of the deployed dashboard
+The dashboard reads only precomputed files in `reports/`. An optional sign-in (`app/auth.py`: salted PBKDF2 hashes in Streamlit
+secrets, constant-time comparison, lock-out after five failures) keeps casual visitors out of a hosted copy. It does not hide files in a
+public repository; use a private repository and the host's viewer allow-list for anything sensitive. The interface is available in
+English and Bulgarian; the Bulgarian text has not been reviewed by a native speaker.
+
 ## Known limitations and failure modes
 * **Regime shifts.** Tree models cannot extrapolate. In October 2026 (average price €232/MWh, above anything in training) the model
   under-forecast by about €29/MWh on average. Level-anchored variants help in that episode but not in earlier level shifts, and no
