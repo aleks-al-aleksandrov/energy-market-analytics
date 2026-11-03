@@ -163,11 +163,12 @@ def main() -> None:
     if a.plus:
         from src import ml_plus
         ml_plus.main(f, p)
-        from src import battery_study, calibrate, reserve, robust_experiment
+        from src import battery_study, calibrate, montecarlo, reserve, robust_experiment
         calibrate.main()          # conformal recalibration of the 10-90 % band (adds q10_cal / q90_cal to predictions.csv)
         robust_experiment.main()  # regime-robust variants, bootstrap skill intervals, level-shift episodes
         reserve.main()            # balancing reserve prices and volumes for the dashboard
         battery_study.main()      # degradation sensitivity, confidence filter, reserve stacking
+        montecarlo.main()         # Monte Carlo battery-revenue scenarios and their calibration back-test
     log.info("done - reports in %s", C.REPORTS)
 
 

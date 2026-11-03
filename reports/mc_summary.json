@@ -1,0 +1,65 @@
+{
+  "chosen_method": "slippage",
+  "rule": "generator whose P10-P90 coverage on the CV months is closest to 80 %; holdout only reported",
+  "calibration": {
+    "error_vector": {
+      "days": 668,
+      "coverage_10_90": 0.7065868263473054,
+      "coverage_05_95": 0.8353293413173652,
+      "pit_mean": 0.4156811377245509,
+      "mean_predicted_prob_loss": 0.01924251497005988,
+      "realised_loss_rate": 0.005988023952095809,
+      "median_bias_eur": -23.57625819035954,
+      "coverage_10_90_cv": 0.7192374350086655,
+      "median_bias_eur_cv": -20.854305518203347,
+      "days_cv": 577,
+      "coverage_10_90_holdout": 0.6263736263736264,
+      "median_bias_eur_holdout": -33.98146900627981,
+      "days_holdout": 91
+    },
+    "slippage": {
+      "days": 668,
+      "coverage_10_90": 0.8143712574850299,
+      "coverage_05_95": 0.9131736526946108,
+      "pit_mean": 0.4821347305389222,
+      "mean_predicted_prob_loss": 0.041035928143712576,
+      "realised_loss_rate": 0.005988023952095809,
+      "median_bias_eur": -4.034103818006557,
+      "coverage_10_90_cv": 0.8318890814558059,
+      "median_bias_eur_cv": -4.020763697109487,
+      "days_cv": 577,
+      "coverage_10_90_holdout": 0.7032967032967034,
+      "median_bias_eur_holdout": -11.689717733125804,
+      "days_holdout": 91
+    }
+  },
+  "annual": {
+    "p05": 74344.21070100825,
+    "p10": 75967.25278957981,
+    "p50": 82388.32118529934,
+    "p90": 88811.97437254158,
+    "p95": 90878.36284006905,
+    "mean": 82414.53733493433,
+    "sd": 5069.230792331609,
+    "n_years": 2000,
+    "block_days": 7,
+    "pool": "last 180 back-test days (slippage blocks)",
+    "backtest_realised_eur_per_mw_year": 87183.3212818948,
+    "backtest_realised_percentile": 0.825
+  },
+  "next_day": {
+    "p05": -66.32856735136777,
+    "p10": -33.83183631192094,
+    "p50": 93.50356534652715,
+    "p90": 205.5237329337467,
+    "p95": 238.20467989784987,
+    "expected_at_forecast": 144.16670194229306,
+    "mean": 83.64679065864408,
+    "prob_loss": 0.177,
+    "pool_days": 180,
+    "draws": 4000,
+    "method": "slippage",
+    "delivery_day": "2026-11-03"
+  },
+  "battery": "1 MW / 2 MWh / 90 %, no degradation"
+}
