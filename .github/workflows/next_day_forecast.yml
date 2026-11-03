@@ -46,10 +46,18 @@ jobs:
         run: python -m src.run_all --plus
       - name: Forecast next delivery day
         run: python -m src.predict_next_day
+      - name: Monte Carlo revenue range for the new forecast
+        run: python -m src.montecarlo
+      - name: Re-check whether outage history is testable (weekly)
+        if: github.event.schedule == '0 3 * * 1' || github.event_name == 'workflow_dispatch'
+        run: python -m src.retest_optional
       - name: Publish forecast
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f reports/forecast_next_day.csv reports/ttf_snapshots.csv reports/forecast_log.csv reports/live_track_record.csv reports/outage_pit.csv
+          git add -f reports/forecast_next_day.csv reports/ttf_snapshots.csv reports/forecast_log.csv reports/live_track_record.csv reports/outage_pit.csv reports/mc_summary.json reports/retest_status.json
+          # After a retrain the dashboard's other inputs changed too (metrics, SHAP, battery study ...): publish all of reports/,
+          # so a hosted copy that reads the repository shows current numbers. Weekly only, to keep the repository small.
+          if [ "${{ github.event.schedule }}" = "0 3 * * 1" ] || [ "${{ inputs.retrain }}" = "true" ]; then git add -f reports; fi
           git commit -m "Next-day forecast $(date -u +%Y-%m-%d)" || echo "no change"
           git push
