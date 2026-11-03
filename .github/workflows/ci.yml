@@ -22,8 +22,8 @@ jobs:
       - name: Install light dependencies
         run: |
           pip install -r app/requirements.txt
-          pip install holidays python-dotenv requests pytest
+          pip install holidays python-dotenv requests scikit-learn lightgbm pytest
       - name: Unit tests (no-leakage, fuels, live track record, battery, data checks)
-        run: python -m pytest tests -q
+        run: python -m pytest tests --ignore=tests/test_dashboard_smoke.py -q
       - name: Dashboard smoke test (every page runs against the committed reports/)
         run: python -m pytest tests/test_dashboard_smoke.py -q

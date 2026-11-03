@@ -17,4 +17,5 @@ __pycache__/
 
 
 # local tooling
-.claude/
+.vscode/
+.idea/
