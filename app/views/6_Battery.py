@@ -70,6 +70,8 @@ with top:
              headline=(f"A {power:g} MW / {power * dur:g} MWh battery earns <b>€{s.loc['forecast_lightgbm', 'eur_per_mw_year'] / 1000:,.0f}k per MW-year</b> on the LightGBM "
                        f"schedule, <b>{_pl:.0f}%</b> of the perfect-foresight value; the naive rule gets {_pn:.0f}%."))
 
+T.toc([("day", "One day"), ("monthly", "Monthly & design"), ("risk", "Monte Carlo risk"), ("costs", "Costs & investment"), ("reserve", "Reserve")])
+
 k = st.columns(len(s))
 for col, name in zip(k, strategies):
     r = s.loc[name]
@@ -107,7 +109,7 @@ T.takeaway(f"A {power:g} MW / {power * dur:g} MWh battery at {eff:.0%} efficienc
            "action")
 
 # --- one day in detail ------------------------------------------------------------------------------
-T.section("One day in detail", "How the battery is dispatched, and what each schedule earns")
+T.section("One day in detail", anchor="day", subtitle="How the battery is dispatched, and what each schedule earns")
 days = sorted(p["delivery_day"].dt.date.unique())
 best_day = pd.Timestamp(daily.loc[daily["perfect_foresight"].idxmax(), "delivery_day"]).date()
 with T.controls("Day and schedule"):
@@ -177,7 +179,7 @@ if "lightgbm" in p:
             T.chart(fig, 120 + 22 * len(prof), legend=False)
 
 # --- monthly + sensitivity -------------------------------------------------------------------------
-T.section("When and how much", "Monthly revenue and sensitivity to battery design")
+T.section("When and how much", anchor="monthly", subtitle="Monthly revenue and sensitivity to battery design")
 c1, c2 = st.columns([1.5, 1])
 d = daily.copy()
 d["month"] = pd.to_datetime(d["delivery_day"]).dt.to_period("M").dt.to_timestamp()
@@ -218,8 +220,63 @@ if sens is not None:
                    f"<b>€{qs.iloc[-1]:,.0f}</b> on the highest-spread quarter of days.")
 
 
+# --- Monte Carlo risk ---------------------------------------------------------------------------------------------
+mc = T.load_json("mc_summary.json")
+mcc = T.load_csv("mc_calibration.csv", parse_dates=["delivery_day"])
+mcy = T.load_csv("mc_annual_draws.csv")
+if mc and mcc is not None and mcy is not None:
+    T.section("Revenue risk: Monte Carlo scenarios", anchor="risk", subtitle="How much could the forecast-driven schedule earn, and how far can the range be trusted? Fixed 1 MW / 2 MWh / 90 %, no degradation")
+    meth = mc["chosen_method"]
+    cal = mc["calibration"][meth]
+    ann, nxt = mc["annual"], mc.get("next_day")
+    k = st.columns(4)
+    T.kpi(k[0], "Scenario-year median", f"€{ann['p50'] / 1000:,.0f}k", f"per MW-year · P5–P95 €{ann['p05'] / 1000:,.0f}k–€{ann['p95'] / 1000:,.0f}k", accent=True)
+    T.kpi(k[1], "Back-test realised", f"€{ann['backtest_realised_eur_per_mw_year'] / 1000:,.0f}k", f"at the {100 * ann['backtest_realised_percentile']:.0f}th percentile of the scenarios")
+    T.kpi(k[2], "Range check · P10–P90", f"{100 * cal['coverage_10_90_cv']:.0f}% CV", f"target 80% · holdout {100 * cal['coverage_10_90_holdout']:.0f}%",
+          delta=T.delta_chip(100 * cal["coverage_10_90_holdout"] - 80, " pp holdout", good_when_up=True, digits=0))
+    if nxt:
+        T.kpi(k[3], "Tomorrow's revenue range", f"{'−' if nxt['p10'] < 0 else ''}€{abs(nxt['p10']):,.0f} to €{nxt['p90']:,.0f}", f"P10–P90 per MW · median €{nxt['p50']:,.0f} · expected at forecast €{nxt['expected_at_forecast']:,.0f}")
+    c1, c2 = st.columns([1, 1.4])
+    with c1, T.card(f"A scenario year earns €{ann['p05'] / 1000:,.0f}k–€{ann['p95'] / 1000:,.0f}k per MW (5th–95th percentile)",
+                    f"{ann['n_years']:,} simulated years of 365 days · {ann['block_days']}-day blocks so bad regimes persist"):
+        fig = go.Figure(go.Histogram(x=mcy["eur_per_mw_year"], nbinsx=40, marker=dict(color=T.rgba(T.ACCENT, .75), line=dict(color=T.SURFACE, width=1)),
+                                     hovertemplate="€%{x:,.0f} per MW-year · %{y} scenarios<extra></extra>"))
+        for x_, nm, col in ((ann["p05"], "P5", T.NEUTRAL), (ann["p50"], "median", T.TEXT_2), (ann["p95"], "P95", T.NEUTRAL)):
+            fig.add_vline(x=x_, line=dict(color=col, width=1.4, dash="dot"), annotation_text=nm, annotation_font=dict(size=12, color=T.TEXT_2))
+        fig.add_vline(x=ann["backtest_realised_eur_per_mw_year"], line=dict(color=T.AQUA, width=2.4),
+                      annotation_text="back-test", annotation_position="top", annotation_font=dict(size=12, color=T.TEXT))
+        fig.update_layout(bargap=0.04, hovermode="closest")
+        fig.update_xaxes(title="annual revenue (EUR per MW-year)", tickprefix="€", showspikes=False)
+        fig.update_yaxes(title="scenarios")
+        T.chart(fig, 360, legend=False)
+    cm = mcc[mcc["method"] == meth].sort_values("delivery_day").tail(120)
+    with c2, T.card(f"Realised daily revenue sat inside the simulated P10–P90 range on {100 * cal['coverage_10_90']:.0f}% of back-test days",
+                    f"Each day's range uses only errors known before that day · last {len(cm)} days shown · {cal['days']} days tested",
+                    T.legend_html([("Realised", T.TEXT), ("P10–P90 range", T.rgba(T.ACCENT, .4)), ("Median", T.ACCENT)])):
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=cm["delivery_day"], y=cm["p90"], line=dict(width=0), showlegend=False, hoverinfo="skip"))
+        fig.add_trace(go.Scatter(x=cm["delivery_day"], y=cm["p10"], fill="tonexty", fillcolor=T.rgba(T.ACCENT, .18), line=dict(width=0), hoverinfo="skip", showlegend=False))
+        fig.add_trace(go.Scatter(x=cm["delivery_day"], y=cm["p50"], name="median", line=dict(color=T.ACCENT, width=1.6),
+                                 hovertemplate="median <b>€%{y:,.0f}</b><extra></extra>"))
+        out = ~cm["in_10_90"]
+        fig.add_trace(go.Scatter(x=cm["delivery_day"], y=cm["realised"], mode="lines", name="realised", line=dict(color=T.TEXT, width=1.4),
+                                 hovertemplate="realised <b>€%{y:,.0f}</b><extra></extra>"))
+        fig.add_trace(go.Scatter(x=cm.loc[out, "delivery_day"], y=cm.loc[out, "realised"], mode="markers", name="outside range", showlegend=False,
+                                 marker=dict(size=7, color=T.RED, line=dict(color=T.SURFACE, width=1.5)), hovertemplate="outside range <b>€%{y:,.0f}</b><extra></extra>"))
+        fig.update_yaxes(title="EUR per MW-day", tickprefix="€")
+        T.chart(fig, 360, legend=False)
+    other = [m for m in mc["calibration"] if m != meth]
+    alt = mc["calibration"][other[0]] if other else None
+    T.takeaway(f"The range check passes on the CV months (<b>{100 * cal['coverage_10_90_cv']:.0f}%</b> vs 80% target) but is too narrow on the holdout "
+               f"(<b>{100 * cal['coverage_10_90_holdout']:.0f}%</b>): the scenarios are built from recent misses and cannot anticipate a regime shift. "
+               + (f"The generator was chosen on CV months only: a simpler one that draws error vectors independently of the schedule covered just "
+                  f"{100 * alt['coverage_10_90_cv']:.0f}% because realised revenue falls systematically short of the revenue expected at forecast prices "
+                  f"(the optimiser's curse: the schedule sells where the forecast is too high). " if alt else "")
+               + f"Predicted loss probability per day averages {100 * cal['mean_predicted_prob_loss']:.0f}% against {100 * cal['realised_loss_rate']:.1f}% realised, so tails are conservative.",
+               "warning")
+
 # --- costs, filter, investment ------------------------------------------------------------------------------------
-T.section("Costs and investment view", "What wear costs, whether a confidence filter helps, and what the revenue means as a project")
+T.section("Costs and investment view", anchor="costs", subtitle="What wear costs, whether a confidence filter helps, and what the revenue means as a project")
 dg, fl = T.load_csv("battery_degradation.csv"), T.load_csv("battery_filter.csv")
 c1, c2 = st.columns(2)
 if dg is not None:
@@ -278,7 +335,7 @@ T.takeaway(f"At the chosen assumptions this {power:g} MW / {power * dur:g} MWh b
 # --- reserve capacity (indicative) ---------------------------------------------------------------------------------
 rv, rm = T.load_csv("battery_reserve.csv"), T.load_csv("reserve_monthly.csv", parse_dates=["month"])
 if rv is not None and rm is not None:
-    T.section("Balancing reserve capacity (indicative)", "ENTSO-E contracted reserve prices for Bulgaria — a different revenue stream, with big caveats")
+    T.section("Balancing reserve capacity (indicative)", anchor="reserve", subtitle="ENTSO-E contracted reserve prices for Bulgaria — a different revenue stream, with big caveats")
     T.takeaway("<b>Read with care.</b> The published reserve prices are constant for long stretches (e.g. FCR €10 → €50 → €25/MW/h), which points to "
                "<b>administered prices, not a competitive market</b>, so they can change with regulation. The markets are tiny: FCR about "
                f"{rv.set_index('product').loc['FCR (symmetric)', 'contracted_mw']:.0f} MW and aFRR-up about {rv.set_index('product').loc['aFRR up', 'contracted_mw']:.0f} MW "
@@ -325,3 +382,7 @@ with st.expander("Assumptions and limitations"):
 - At most one full cycle per day; start and end each day empty; efficiency split equally between charge and discharge.
 - Forecast schedules use the walk-forward forecasts (made before gate closure), settled at the actual price.
 """)
+
+T.next_steps([("views/0_Trader_Brief.py", "Trader brief", "Tomorrow's battery schedule and its revenue range."),
+              ("views/3_Forecast.py", "Forecast", "How good the prices behind the schedule are."),
+              ("views/7_About.py", "About and method", "Assumptions and limitations of the simulation.")])

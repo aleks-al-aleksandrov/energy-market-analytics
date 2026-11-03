@@ -176,3 +176,7 @@ if "net_import" in m and flows:
         fig.update_xaxes(title="← export · MW · import →", showgrid=True, showspikes=False)
         fig.update_yaxes(showgrid=False)
         T.chart(fig, 320, legend=False)
+
+T.next_steps([("views/1_Price_Drivers.py", "Price drivers", "What sets the Bulgarian price level."),
+              ("views/3_Forecast.py", "Forecast", "Neighbour prices are among the top model inputs."),
+              ("overview.py", "Market overview", "Back to prices and KPIs.")])

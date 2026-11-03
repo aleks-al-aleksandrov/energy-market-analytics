@@ -1,0 +1,44 @@
+
+/* ============ light-mode overrides for Streamlit's own widgets (the app theme itself stays dark in config.toml) ============ */
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"] { color: var(--text); }
+.stApp p, .stApp li, .stApp label, .stApp span, .stApp div[data-testid="stMarkdownContainer"] { color: inherit; }
+header[data-testid="stHeader"], [data-testid="stToolbar"] { background: transparent; }
+[data-testid="stToolbar"] button, [data-testid="stToolbar"] svg, [data-testid="stHeader"] svg, [data-testid="stExpandSidebarButton"] svg,
+[data-testid="stSidebarCollapseButton"] svg { color: var(--text-2); fill: var(--text-2); }
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] { color: var(--text); }
+[data-testid="stSidebarNav"] a span, [data-testid="stSidebarNav"] span { color: var(--text-2); }
+[data-testid="stSidebarNav"] a[aria-current="page"] span { color: var(--text); font-weight: 650; }
+[data-testid="stSidebarNav"] a:hover { background: var(--surface-2); }
+[data-testid="stSidebarNavSeparator"], [data-testid="stSidebarNav"] header, [data-testid="stNavSectionHeader"] { color: var(--muted); }
+
+/* Streamlit's own controls are dark. Inverting just the control boxes (never their labels, charts or my HTML) with a half-turn of
+   hue gives a light control with the same hues, and keeps every Streamlit widget type covered without per-widget colours. */
+[data-testid="stDateInputField"], [data-testid="stTextInputRootElement"], [data-testid="stNumberInputContainer"], [data-baseweb="select"], [data-testid="stNumberInputContainer"], [data-baseweb="input"],
+[data-testid="stButtonGroup"], [data-testid="stSlider"] [data-baseweb="slider"], [data-testid="stSelectSlider"] [data-baseweb="slider"],
+[data-testid="stCheckbox"] label > span:first-of-type, [data-testid="stCheckbox"] [data-baseweb="checkbox"] > div:first-child,
+[data-baseweb="popover"] > div, [data-testid="stDateInputCalendar"] { filter: invert(1) hue-rotate(180deg); }
+[data-testid="stSliderThumbValue"], [data-testid="stSliderTickBarMin"], [data-testid="stSliderTickBarMax"] { color: var(--text-2); }
+[data-testid="stRadio"] label, [data-testid="stCheckbox"] label p, [data-testid="stToggle"] label p { color: var(--text); }
+
+/* tabs, expanders, buttons, alerts, tables */
+div[data-testid="stTabs"] button { color: var(--text-2); }
+div[data-testid="stTabs"] button[aria-selected="true"] { color: var(--text); }
+[data-testid="stExpander"] details { background: var(--surface); }
+[data-testid="stExpander"] summary, [data-testid="stExpander"] summary * { color: var(--text-2); }
+[data-testid="stExpander"] summary:hover, [data-testid="stExpander"] summary:hover * { color: var(--text); }
+.stButton button, [data-testid="stDownloadButton"] button, [data-testid="stBaseButton-secondary"] { background: var(--surface) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.stButton button:hover, [data-testid="stDownloadButton"] button:hover { border-color: var(--accent-ui) !important; }
+[data-testid="stBaseButton-primary"] { background: var(--accent-ui) !important; color: #fff !important; border-color: var(--accent-ui) !important; }
+[data-testid="stAlert"] { background: var(--surface); color: var(--text); border: 1px solid var(--border-soft); }
+[data-testid="stPageLink"] a { color: var(--text); }
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] * { color: var(--muted); }
+code { background: var(--surface-2); color: var(--text); }
+.brand-mark { box-shadow: 0 6px 18px rgba(166,74,6,.22); }
+.kpi.accent, .headline { background-image: none; }
+.kpi.accent { background: linear-gradient(165deg, rgba(var(--accent-rgb),.10), var(--surface) 58%); }
+.headline { background: rgba(var(--accent-rgb),.08); border-color: rgba(var(--accent-rgb),.30); }
+
+/* text inside an inverted control must be the DARK-theme ink, so the filter turns it into dark text on the light control */
+[data-testid="stDateInputField"] *, [data-testid="stTextInputRootElement"] *, [data-testid="stNumberInputContainer"] *, [data-baseweb="select"] *,
+[data-testid="stButtonGroup"] *, [data-baseweb="popover"] > div * { color: #E8EBF0 !important; }
+[data-testid="stButtonGroup"] button[aria-checked="true"] *, [data-testid="stButtonGroup"] button[aria-pressed="true"] * { color: #F5A524 !important; }

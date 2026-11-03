@@ -172,3 +172,7 @@ if bw is not None:
         t.index = [i.replace("_", " ").capitalize() for i in t.index]
         t.index.name = "Schedule"
         T.table(t, fmt={"EUR / MW-year": "{:,.0f}", "% of perfect": "{:.1f}"}, bars={"% of perfect": T.ACCENT})
+
+T.next_steps([("views/3_Forecast.py", "Forecast", "The model these weather inputs feed."),
+              ("views/5_Model_Lab.py", "Model lab", "Feature groups, SHAP and ablation."),
+              ("views/6_Battery.py", "Battery simulation", "What forecast errors cost in revenue.")])

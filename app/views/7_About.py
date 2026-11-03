@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import streamlit as st
 
 import theme as T
+from i18n import tr
 
 T.setup("About")
 T.header("About", "Method, data and limitations",
@@ -21,7 +22,7 @@ steps = [("01", "Ingest", "ENTSO-E prices, load, wind/solar forecasts, generatio
          ("05", "Evaluate", "Expanding-window walk-forward · 3-month untouched holdout · MAE, skill, Diebold-Mariano"),
          ("06", "Value", "Battery LP settled at actual prices · SHAP · drift monitoring · next-day forecast")]
 st.markdown("<div class='flow'>" + "<span class='arrow'>→</span>".join(
-    f"<div class='step'><div class='n'>{n}</div><div class='t'>{t}</div><div class='d'>{d}</div></div>" for n, t, d in steps)
+    f"<div class='step'><div class='n'>{n}</div><div class='t'>{tr(t)}</div><div class='d'>{tr(d)}</div></div>" for n, t, d in steps)
     + "</div>", unsafe_allow_html=True)
 
 c1, c2 = st.columns(2)
@@ -54,3 +55,23 @@ available because traders hold equivalent vendor forecasts.</li>
                 unsafe_allow_html=True)
 st.markdown("<div class='muted'>The dashboard reads only precomputed files in <code>reports/</code> and never calls the ENTSO-E API. "
             "Rebuild everything with <code>python -m src.run_all --plus</code>.</div>", unsafe_allow_html=True)
+
+# --- re-tests of rejected inputs ---------------------------------------------------------------------------------------------
+_rt, _fc = T.load_json("retest_status.json"), T.load_json("feature_choice.json")
+if _rt:
+    T.section("Re-tests of rejected inputs", "Checked again every week by src/retest_optional.py; the standing CV-only adoption rule decides, never the holdout")
+    _pr = _rt.get("revision_probe", {})
+    if _rt.get("outages_testable"):
+        T.takeaway("Outage history can now be tested leak-free (the API returns several revisions per document, or enough point-in-time snapshots exist). "
+                   "The outage experiment was re-run on CV months; see the Model Lab for the outcome.", "action")
+    else:
+        T.takeaway(f"Outages cannot be tested yet: the ENTSO-E API still returns one revision per document ({_pr.get('documents_with_multiple_revisions', 0)} of "
+                   f"{_pr.get('documents', 0)} have several) and only {_rt.get('pit_days', 0)} of {_rt.get('pit_days_needed', 0)} point-in-time snapshot days have been collected. "
+                   "The daily forecast workflow keeps collecting them.", "warning")
+    if _fc:
+        T.takeaway(f"Interconnector capacity and fuel prices were re-tested on the current data: CV MAE €{_fc.get('cv_mae_with_capacity', float('nan')):.2f} with capacity and "
+                   f"€{_fc.get('cv_mae_with_fuels', float('nan')):.2f} with fuels, against €{_fc.get('cv_mae_base', float('nan')):.2f} without either, so neither is adopted.", "insight")
+
+T.next_steps([("overview.py", "Market overview", "Start with the prices."),
+              ("views/0_Trader_Brief.py", "Trader brief", "Tomorrow's forecast in plain language."),
+              ("views/5_Model_Lab.py", "Model lab", "Every model that was tried.")])

@@ -40,6 +40,8 @@ T.header("Decide", f"Trader brief · delivery {day:%A %d %B %Y}",
          headline=(f"Expected base price <b>€{base:.0f}/MWh</b> ({100 * (base / last7 - 1):+.0f}% vs the last 7 days), cheapest at <b>{hrs[int(f.argmin())]}</b> "
                    f"(€{f.min():.0f}) and dearest at <b>{hrs[int(f.argmax())]}</b> (€{f.max():.0f}). Highest spike probability: {100 * spike.max():.0f}% at {hrs[int(spike.argmax())]}."))
 
+T.toc([("what-to-do", "What to do"), ("trust", "How much to trust it"), ("playbook", "Playbook")])
+
 # --- headline numbers -------------------------------------------------------------------------------------
 k = st.columns(5)
 T.kpi(k[0], "Expected base price", T.fmt_eur(base), "24h average, EUR/MWh", accent=True, spark=f,
@@ -83,14 +85,18 @@ with T.card("Spike risk by hour", "Probability that the price exceeds recent lev
     T.chart(fig, 220, legend=False)
 
 # --- the playbook: rule-based actions -------------------------------------------------------------------------
-T.section("What to do", "Rule-based reading of tomorrow's forecast")
+T.section("What to do", anchor="what-to-do", subtitle="Rule-based reading of tomorrow's forecast")
 charge = [hrs[i] for i, v in enumerate(net) if v < -1e-6]
 sell = [hrs[i] for i, v in enumerate(net) if v > 1e-6]
 rev = float(np.sum(net * f))
+_mc = (T.load_json('mc_summary.json') or {}).get('next_day')
+_mc = _mc if _mc and _mc.get('delivery_day') == str(day.date()) else None
 actions = []
 if charge and sell:
     actions.append(("Battery", f"Charge {', '.join(charge)}; discharge {', '.join(sell)}.",
-                    f"Expected €{rev:,.0f} per MW at forecast prices (1 MW / 2 MWh, 90 % efficiency, one cycle)."))
+                    f"Expected €{rev:,.0f} per MW at forecast prices (1 MW / 2 MWh, 90 % efficiency, one cycle)."
+                    + (f" Monte Carlo range (P10–P90): {'−' if _mc['p10'] < 0 else ''}€{abs(_mc['p10']):,.0f} to €{_mc['p90']:,.0f}, median €{_mc['p50']:,.0f}: realised revenue usually falls below the "
+                       "forecast-price figure because the schedule sells where the forecast is too high." if _mc else "")))
 else:
     actions.append(("Battery", "No profitable cycle at forecast prices.", "The forecast spread does not cover the round-trip losses."))
 gap = 100 * (base / last30 - 1)
@@ -141,7 +147,7 @@ if "price_RO" in m:
 T.kpi(cols[2], "BG price level", f"€{last7:.0f}", f"7-day average · 30-day €{last30:.0f} · 12-month €{last365:.0f}")
 
 # --- how much to trust it ---------------------------------------------------------------------------------------------
-T.section("How much to trust it", "Recent performance of this model on days it had not seen")
+T.section("How much to trust it", anchor="trust", subtitle="Recent performance of this model on days it had not seen")
 pr = T.load_predictions()
 if pr is not None:
     rec = pr[pr["delivery_day"] >= pr["delivery_day"].max() - pd.Timedelta(days=29)].dropna(subset=["actual", "lightgbm", "naive_d1"])
@@ -164,7 +170,7 @@ T.takeaway("<b>Known blind spots:</b> plant outages (Kozloduy nuclear, lignite u
            "any interconnector constraint announced after the forecast was made. None of these are in the model — check them manually before acting.", "warning")
 
 # --- general playbook (what the project found) -------------------------------------------------------------------------
-T.section("Playbook for common situations", "What the 2023–2026 data say, and what a trader or analyst can do about it")
+T.section("Playbook for common situations", anchor="playbook", subtitle="What the 2023–2026 data say, and what a trader or analyst can do about it")
 # computed, not asserted: which hours rose most between the same 61 days one year ago and now
 now_w = price.index.max()
 cur = price[price.index > now_w - pd.Timedelta(days=61)]
@@ -181,3 +187,7 @@ rows = [
     ("Price level far above recent history", "Tree models stop extrapolating and under-forecast", "Use the level-adjusted forecast as a cross-check (it did best in Oct 2026)"),
 ]
 T.table(pd.DataFrame(rows, columns=["Situation", "What happens", "What to do"]).set_index("Situation"))
+
+T.next_steps([("views/3_Forecast.py", "Forecast detail", "Back-test, error heatmap and the live track record."),
+              ("views/6_Battery.py", "Battery simulation", "What the schedule earns and the Monte Carlo revenue range."),
+              ("views/5_Model_Lab.py", "Model lab", "Every model that was tried, with significance tests.")])

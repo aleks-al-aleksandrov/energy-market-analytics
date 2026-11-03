@@ -491,3 +491,7 @@ with tab5:
                        "price features drifting in late 2026 is a genuine level shift.")
         T.takeaway("<b>Retraining rule:</b> retrain monthly on the expanding window; retrain immediately if the 30-day rolling MAE stays more "
                    "than 20 % above its CV level for 14 consecutive days, or a key feature's PSI exceeds 0.25.", "action")
+
+T.next_steps([("views/3_Forecast.py", "Forecast", "The chosen model in the back-test and live."),
+              ("views/6_Battery.py", "Battery simulation", "What forecast skill is worth in money."),
+              ("views/7_About.py", "About and method", "Data, cleaning and limitations.")])

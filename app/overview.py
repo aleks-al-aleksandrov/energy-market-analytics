@@ -11,6 +11,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+import signature as S
 import theme as T
 
 T.setup("Market Overview")
@@ -52,6 +53,8 @@ with top:
              headline=(f"Over {rng[0]:%d %b %Y} – {rng[1]:%d %b %Y} the average price was <b>€{p.mean():.0f}/MWh</b>"
                        + (f", <b>{ch:+.0f}%</b> versus the {n_days} days before" if ch is not None else "")
                        + f". The cheapest hour was <b>€{p.min():.0f}</b> ({p.idxmin():%d %b}); <b>{100 * neg.mean():.1f}%</b> of hours were negative."))
+
+S.tomorrow_hero(top)
 
 daily = p.resample("D").mean()
 dstd = p.groupby(p.index.date).std()
@@ -138,6 +141,47 @@ with c2, T.card(f"A typical day: cheapest at {hour_stats[0.5].idxmin()}:00 (€{
     fig.update_yaxes(title="EUR/MWh")
     T.chart(fig, 330, legend=False)
 
+# --- the daily shape through time (animated) ------------------------------------------------------------------------------------
+_mk = px_.index.strftime("%Y-%m")
+_mh = px_.groupby([_mk, px_.index.hour]).median().unstack()
+_mh = _mh[_mh.notna().sum(axis=1) == 24]
+_mh = _mh[px_.groupby(_mk).count().reindex(_mh.index) >= 24 * 20]     # only months with at least 20 days of prices
+if len(_mh) >= 6:
+    _depth = _mh[[18, 19, 20, 21]].max(axis=1) - _mh[[10, 11, 12, 13, 14, 15]].min(axis=1)
+    _best = _depth.idxmax()
+    _ref = _mh.median()
+    _frames = [go.Frame(name=mo, data=[go.Scatter(y=_mh.loc[mo].tolist())], traces=[1],
+                        layout=go.Layout(annotations=[dict(x=0.99, y=1.0, xref="paper", yref="paper", xanchor="right", yanchor="top", showarrow=False,
+                                                            text=f"<b>{mo}</b>  gap €{_depth.loc[mo]:.0f}", font=dict(size=14, color=T.TEXT))]))
+               for mo in _mh.index]
+    with T.card(f"The gap between evening peak and midday trough peaked at €{_depth.max():.0f} in {_best}; the latest month shows €{_depth.iloc[-1]:.0f}",
+                "Median price by hour for each month since 2023. Press play, or drag the slider, to watch the solar dip deepen and fade with the seasons.",
+                T.legend_html([("Selected month", T.ACCENT), ("Median of all months", T.NEUTRAL)])):
+        fig = go.Figure(data=[go.Scatter(x=list(range(24)), y=_ref.tolist(), name="all months", line=dict(color=T.NEUTRAL, width=1.6, dash="dot"), hovertemplate="all months <b>%{y:.0f}</b><extra></extra>"),
+                              go.Scatter(x=list(range(24)), y=_mh.iloc[-1].tolist(), name="selected month", line=dict(color=T.ACCENT, width=3, shape="spline"),
+                                         fill="tonexty", fillcolor=T.rgba(T.ACCENT, .10), hovertemplate="%{x}:00 · <b>€%{y:.0f}</b><extra></extra>")],
+                        frames=_frames)
+        _lo, _hi = float(np.nanmin(_mh.to_numpy())), float(np.nanmax(_mh.to_numpy()))
+        fig.update_yaxes(title="EUR/MWh", range=[min(_lo - 10, 0), _hi + 15])
+        fig.update_xaxes(title="hour (local)", dtick=3, range=[-0.3, 23.3])
+        fig.add_annotation(x=0.99, y=1.0, xref="paper", yref="paper", xanchor="right", yanchor="top", showarrow=False,
+                           text=f"<b>{_mh.index[-1]}</b>  gap €{_depth.iloc[-1]:.0f}", font=dict(size=14, color=T.TEXT))
+        fig.update_layout(hovermode="x unified",
+                          updatemenus=[dict(type="buttons", direction="left", active=-1, x=0, xanchor="left", y=-0.16, yanchor="top", pad=dict(t=0, r=8),
+                                            bgcolor=T.SURFACE_2, bordercolor=T.BORDER, font=dict(color=T.TEXT, size=12),
+                                            buttons=[dict(label="▶ Play", method="animate",
+                                                          args=[None, dict(frame=dict(duration=380, redraw=True), transition=dict(duration=260, easing="cubic-in-out"), fromcurrent=True)]),
+                                                     dict(label="❚❚ Pause", method="animate",
+                                                          args=[[None], dict(mode="immediate", frame=dict(duration=0, redraw=False), transition=dict(duration=0))])])],
+                          sliders=[dict(active=len(_mh) - 1, x=0.2, len=0.8, y=-0.14, yanchor="top", pad=dict(t=0, b=0), bgcolor=T.BORDER, bordercolor=T.BORDER,
+                                        activebgcolor=T.ACCENT_UI, tickcolor=T.MUTED_DIM, font=dict(color=T.MUTED, size=11), currentvalue=dict(visible=False),
+                                        steps=[dict(method="animate", label=mo[2:] if i % 3 == 0 else "", args=[[mo], dict(mode="immediate", frame=dict(duration=0, redraw=True), transition=dict(duration=0))])
+                                               for i, mo in enumerate(_mh.index)])],
+                          margin=dict(b=70))
+        T.chart(fig, 430, legend=False, table=False, desc="Animated: one frame per month")
+        with st.expander("Table view", icon=":material/table:"):
+            T.table_html(_mh.round(1).set_axis([f"{h:02d}" for h in range(24)], axis=1).rename_axis("Month"), {f"{h:02d}": "{:.0f}" for h in range(24)})
+
 # --- calendar -----------------------------------------------------------------------------------------------------------------
 cal = daily.to_frame("price")
 cal.index = cal.index.tz_localize(None)
@@ -189,3 +233,7 @@ T.takeaway(f"The yearly average moved from <b>€{yr['Average'].iloc[0]:.0f}</b>
 T.table(yr.drop(columns="Hours"), fmt={"Average": "{:.1f}", "Std dev": "{:.1f}", "Min": "{:.1f}", "Max": "{:.1f}", "Negative hours": "{:.0f}"},
         bars={"Average": T.ACCENT, "Negative hours": T.DOWN})
 T.download(yr, "yearly-price-summary", key="dl_year")
+
+T.next_steps([("views/0_Trader_Brief.py", "Trader brief", "Tomorrow's forecast and what to do about it."),
+              ("views/1_Price_Drivers.py", "Price drivers", "Why prices move: solar, residual load, gas."),
+              ("views/2_Cross_Border.py", "Cross-border", "How tightly Bulgaria follows Romania, Greece, Hungary.")])

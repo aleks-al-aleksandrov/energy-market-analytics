@@ -35,9 +35,11 @@ with top:
              ["Gate-closure information set", "Monthly expanding-window retrain", "Last 3 months = untouched holdout", "Bands: conformal-calibrated"],
              headline=(nd_txt + rec_txt).strip())
 
+T.toc([("next-day", "Next day"), ("explorer", "Back-test explorer"), ("failures", "Where it fails"), ("live", "Live track record")])
+
 # --- next-day forecast -------------------------------------------------------------------------------------------------------------------
 if nd is not None and len(nd):
-    T.section(f"Next-day forecast · delivery {pd.Timestamp(nd['delivery_day'].iloc[0]):%A %d %B %Y}",
+    T.section(f"Next-day forecast · delivery {pd.Timestamp(nd['delivery_day'].iloc[0]):%A %d %B %Y}", anchor="next-day", subtitle=
               f"Generated {nd['generated_at'].iloc[0]} · model trained until {nd['model_trained_until'].iloc[0]} · `python -m src.predict_next_day`")
     f = nd["forecast_eur_mwh"]
     hrs = nd["time_local"].str[-5:]
@@ -89,7 +91,7 @@ else:
 if p is None:
     T.missing("Back-test predictions")
     st.stop()
-T.section("Back-test explorer", "Pick any window from the walk-forward back-test")
+T.section("Back-test explorer", anchor="explorer", subtitle="Pick any window from the walk-forward back-test")
 models = [c for c in ("lightgbm", "lightgbm_level", "lightgbm_blend", "ensemble", "ridge", "mlp", "naive_d1", "naive_w1", "lightgbm_nocapacity", "lightgbm_capacity",
                       "lightgbm_nofuel", "lightgbm_fuels") if c in p]
 days = sorted(p["delivery_day"].dt.date.unique())
@@ -128,7 +130,7 @@ if len(w) and chosen:
     T.kpi(cols[-1], "Average price", T.fmt_eur(w["actual"].mean()), f"{len(w)} hours")
 
 # --- diagnostics ----------------------------------------------------------------------------------------------------------------------------------
-T.section("Where does the model fail?", "LightGBM across the whole back-test (25 CV months + 3 holdout months)")
+T.section("Where does the model fail?", anchor="failures", subtitle="LightGBM across the whole back-test (25 CV months + 3 holdout months)")
 pp = p.dropna(subset=["actual", "lightgbm"]).copy()
 pp["err"] = pp["actual"] - pp["lightgbm"]
 pp["ae"] = pp["err"].abs()
@@ -198,7 +200,7 @@ with T.card(f"The worst month is {worst:%b %Y} (MAE €{mon.loc[worst, 'lgb']:.0
     T.chart(fig, 330, legend=False)
 
 # --- live track record ---------------------------------------------------------------------------------------------------------------------------------
-T.section("Live track record", "Forecasts generated before gate closure, scored against the published day-ahead prices")
+T.section("Live track record", anchor="live", subtitle="Forecasts generated before gate closure, scored against the published day-ahead prices")
 tr, fl = T.load_csv("live_track_record.csv"), T.load_csv("forecast_log.csv")
 if tr is not None and len(tr):
     k = st.columns(4)
@@ -220,3 +222,7 @@ else:
                 f"<span>Every run of <code>python -m src.predict_next_day</code> is logged ({n_log} hours so far). Only runs made before "
                 f"12:00 CET on the day before delivery count as live, which the daily GitHub Action does automatically. "
                 f"Scores appear here once the published prices for those days are available.</span></div></div>", unsafe_allow_html=True)
+
+T.next_steps([("views/0_Trader_Brief.py", "Trader brief", "Tomorrow's forecast turned into actions."),
+              ("views/4_Weather_Uncertainty.py", "Weather uncertainty", "Does better weather knowledge improve the forecast?"),
+              ("views/5_Model_Lab.py", "Model lab", "Leaderboard, SHAP, calibration, drift.")])

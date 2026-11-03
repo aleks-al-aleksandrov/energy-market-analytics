@@ -213,3 +213,7 @@ if fm is not None and fd is not None:
                    "The monthly gas series reports the autumn surge only weeks later.")
     T.takeaway(f"Monthly BG power and EU gas prices correlate at <b>{both['power'].corr(both['gas']):.2f}</b> over {len(both)} months. Gas and carbon set the "
                "marginal cost of gas- and lignite-fired plants, information ENTSO-E does not carry; in the forecasting tests it added no accuracy beyond the price lags.", "action")
+
+T.next_steps([("views/2_Cross_Border.py", "Cross-border", "Spreads and market coupling with neighbours."),
+              ("views/3_Forecast.py", "Forecast", "How these drivers feed the model."),
+              ("overview.py", "Market overview", "Back to prices and KPIs.")])
