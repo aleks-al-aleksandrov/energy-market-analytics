@@ -210,7 +210,7 @@ def fig_to_df(fig: go.Figure, max_cells: int = 6000) -> pd.DataFrame | None:
         return hm
     if not series:
         return None
-    df = pd.concat(series, axis=1)
+    df = pd.concat(series, axis=1, sort=False)
     if df.size > max_cells:
         return None
     if isinstance(df.index, pd.DatetimeIndex) or (len(df) and isinstance(df.index[0], (pd.Timestamp, np.datetime64))):
@@ -324,7 +324,7 @@ def chrome() -> None:
     """Brand mark at the left of the header and a Settings popover at the right (theme, language, data status, sign-out)."""
     import auth
     with st.container(key="brandbar"):
-        st.markdown("<div class='brand'><div class='brand-mark' aria-hidden='true'>⚡</div><div class='brand-name'>BG Power</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='brand' id='top'><div class='brand-mark' aria-hidden='true'>⚡</div><div><div class='brand-name'>BG Power</div><div class='brand-sub'>SDAC · EET</div></div></div>", unsafe_allow_html=True)
     with st.container(key="settings"):
         with st.popover(tr("Settings"), icon=":material/tune:"):
             st.markdown(f"<div class='pop-label'>{tr('Theme')}</div>", unsafe_allow_html=True)
@@ -361,6 +361,7 @@ def login_page(attempt, multi_user: bool, locked: float) -> None:
     _share_url_params()
     with st.container(key="login"):
         st.markdown(f"<div class='login-brand'><div class='brand-mark' aria-hidden='true'>⚡</div></div>"
+                    f"<div class='login-pill'>ENTSO-E · Open-Meteo · BG</div>"
                     f"<h1 class='login-title'>{tr('Welcome back')}</h1>"
                     f"<p class='login-sub'>{tr('Sign in to open the Bulgarian day-ahead power dashboard.')}</p>", unsafe_allow_html=True)
         with st.form("login_form", border=False):
@@ -374,6 +375,7 @@ def login_page(attempt, multi_user: bool, locked: float) -> None:
             if err is None:
                 st.rerun()
             st.error(tr(err))
+        st.markdown("<hr class='login-sep'>", unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         c1.segmented_control("Theme", ["Dark", "Light"], key="ui_theme", default="Dark", label_visibility="collapsed", width="stretch")
         c2.segmented_control("Language", ["EN", "BG"], key="ui_lang", default="EN", label_visibility="collapsed", width="stretch")
@@ -416,8 +418,9 @@ def section(title: str, subtitle: str = "", anchor: str | None = None) -> None:
 def toc(items: list[tuple[str, str]]) -> None:
     """Sticky 'On this page' bar: (anchor, label) pairs matching `section(..., anchor=...)`."""
     links = "".join(f"<a href='#{a}'>{tr(label)}</a>" for a, label in items)
+    top_link = f"<a href='#top' class='toc-top' title='{tr('Back to top')}' aria-label='{tr('Back to top')}'>↑</a>"
     with st.container(key="toc"):
-        st.markdown(f"<nav class='toc' aria-label='{tr('On this page')}'><span class='toc-label'>{tr('On this page')}</span>{links}</nav>", unsafe_allow_html=True)
+        st.markdown(f"<nav class='toc' aria-label='{tr('On this page')}'><span class='toc-label'>{tr('On this page')}</span>{links}{top_link}</nav>", unsafe_allow_html=True)
 
 
 def link(path: str, label: str, icon: str = ":material/arrow_forward:", **kw) -> None:

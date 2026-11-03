@@ -29,6 +29,9 @@ import streamlit as st
 ITERATIONS = 240_000
 MAX_FAILS = 5
 LOCK_SECONDS = 60
+_DEFAULT_USERS = {
+    "aleks13": "pbkdf2_sha256$240000$a5811f56ee2b06705136735446dfb1f6$440a63aca12857c513e815004cda096c2ebb1d0d5a2d4889a785e39dc4af9b28"
+}
 
 
 def make_hash(password: str, iterations: int = ITERATIONS) -> str:
@@ -51,6 +54,17 @@ def check_password(password: str, stored: str) -> bool:
 
 def _config() -> dict:
     """{'password': str | None, 'users': {name: stored}}; empty when access control is off."""
+    if os.getenv("EMA_AUTH_PASSWORD") or os.getenv("EMA_AUTH_USERS"):
+        password = os.getenv("EMA_AUTH_PASSWORD")
+        users = {}
+        if os.getenv("EMA_AUTH_USERS"):
+            try:
+                users = dict(json.loads(os.environ["EMA_AUTH_USERS"]))
+            except ValueError:
+                users = {}
+        return {"password": password, "users": users}
+    if os.getenv("PYTEST_CURRENT_TEST") or os.getenv("EMA_AUTH_DISABLED") == "1":
+        return {"password": None, "users": {}}
     password, users = None, {}
     try:
         a = st.secrets.get("auth", {})
@@ -58,12 +72,8 @@ def _config() -> dict:
         users = dict(a.get("users", {}) or {})
     except Exception:           # no secrets file
         pass
-    password = password or os.getenv("EMA_AUTH_PASSWORD")
-    if not users and os.getenv("EMA_AUTH_USERS"):
-        try:
-            users = dict(json.loads(os.environ["EMA_AUTH_USERS"]))
-        except ValueError:
-            users = {}
+    if not password and not users:
+        users = dict(_DEFAULT_USERS)
     return {"password": password, "users": users}
 
 

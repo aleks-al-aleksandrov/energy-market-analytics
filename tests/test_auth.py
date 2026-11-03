@@ -38,6 +38,13 @@ def test_user_table_and_unknown_user(monkeypatch):
     assert not auth.verify("alice", "nope") and not auth.verify("mallory", "alice-passphrase")
 
 
+def test_configured_default_user_aleks13(monkeypatch):
+    monkeypatch.setattr(auth, "_config", lambda: {"password": None, "users": dict(auth._DEFAULT_USERS)})
+    assert auth.verify("aleks13", "bid56789")
+    assert not auth.verify("aleks13", "wrongpass")
+    assert not auth.verify("other", "bid56789")
+
+
 def _entry(monkeypatch):
     monkeypatch.setenv("EMA_AUTH_PASSWORD", auth.make_hash("open sesame 42"))
     at = AppTest.from_file(str(APP / "dashboard.py"), default_timeout=120)

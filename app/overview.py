@@ -205,7 +205,7 @@ T.section("Full history", "Monthly averages and negative-price hours since 2023;
 monthly = px_.resample("MS").agg(["mean", lambda s: (s < 0).sum()])
 monthly.columns = ["mean", "neg"]
 avg_all = px_.mean()
-in_sel = (monthly.index >= pd.Timestamp(rng[0], tz=monthly.index.tz).to_period("M").to_timestamp().tz_localize(monthly.index.tz)) & \
+in_sel = (monthly.index >= pd.Timestamp(rng[0]).replace(day=1).tz_localize(monthly.index.tz)) & \
          (monthly.index <= pd.Timestamp(rng[1], tz=monthly.index.tz))
 c1, c2 = st.columns(2)
 with c1, T.card(f"The latest month averaged €{monthly['mean'].iloc[-1]:.0f}, against €{avg_all:.0f} over the whole history",

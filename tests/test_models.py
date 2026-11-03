@@ -78,7 +78,7 @@ def test_level_shape_follows_a_level_shift_outside_the_training_range():
     hour = idx.tz_convert("Europe/Brussels").hour.to_numpy()
     y = pd.Series(level + 30 * np.sin(hour / 24 * 2 * np.pi), index=idx)
     d1 = walk.shift(1).bfill().reindex(day).to_numpy()                                         # yesterday's mean
-    X = pd.DataFrame({"price_d1_mean": d1, "hour": hour, "dow": idx.dayofweek, "month": idx.month}, index=idx)
+    X = pd.DataFrame({"price_d1_mean": d1, "hour": hour, "dow": idx.day_of_week, "month": idx.month}, index=idx)
     model = M.LevelShape(M.make_lgbm({"n_estimators": 60, "min_child_samples": 5}), list(X.columns)).fit(X, y)
     tree = M.make_lgbm({"n_estimators": 60, "min_child_samples": 5}).fit(X, y)
     Xt = X.iloc[:24].copy()

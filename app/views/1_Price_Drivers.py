@@ -153,7 +153,7 @@ if fm is not None and fd is not None:
     fm = fm.set_index("month")
     bg_m = m["price_BG"].resample("MS").mean()
     bg_m.index = bg_m.index.tz_localize(None)
-    both = pd.concat([bg_m.rename("power"), fm["gas_eur_mwh"].rename("gas")], axis=1).dropna()
+    both = pd.concat([bg_m.rename("power"), fm["gas_eur_mwh"].rename("gas")], axis=1, sort=True).dropna()
     fdd = fd.set_index("date")
     k = st.columns(4)
     T.kpi(k[0], "EU gas · latest month", f"€{fm['gas_eur_mwh'].dropna().iloc[-1]:.0f}", f"/MWh · {fm['gas_eur_mwh'].dropna().index[-1]:%b %Y} (World Bank)",
@@ -169,7 +169,7 @@ if fm is not None and fd is not None:
     c1, c2 = st.columns([1.5, 1])
     fm_i = fm.loc["2023-01-01":]
     idx = pd.concat([bg_m.rename("BG power"), fm_i["gas_eur_mwh"].rename("EU gas"), fdd["brent"].resample("MS").mean().rename("Brent"),
-                     fdd["carbon"].resample("MS").mean().rename("Carbon proxy")], axis=1).loc["2023-01-01":]
+                     fdd["carbon"].resample("MS").mean().rename("Carbon proxy")], axis=1, sort=True).loc["2023-01-01":]
     idx = 100 * idx / idx.iloc[0]
     with c1, T.card(f"Gas is up {idx['EU gas'].dropna().iloc[-1] - 100:+.0f}% and power {idx['BG power'].dropna().iloc[-1] - 100:+.0f}% since January 2023",
                     "Monthly averages, indexed to January 2023 = 100 (one axis; no dual scales)",

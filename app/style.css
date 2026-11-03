@@ -416,3 +416,13 @@ header[data-testid="stHeader"] a[aria-current="page"], header[data-testid="stHea
 .st-key-homecards [data-testid="stVerticalBlock"] { gap: .35rem; }
 .st-key-homecards [data-testid="stCaptionContainer"] { margin-top: -4px; }
 .hero { margin-bottom: 18px; }
+
+/* ============================== UI/UX polish: frosted sticky TOC, login pill, tabular KPIs ============================== */
+.st-key-brandbar .brand-name { line-height: 1.1; }
+.st-key-brandbar .brand-sub { font-size: .66rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); line-height: 1.1; margin-top: 1px; }
+.kpi .value, .hn b { font-variant-numeric: tabular-nums; }
+.st-key-toc { background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px) saturate(1.15); -webkit-backdrop-filter: blur(12px) saturate(1.15); }
+.toc .toc-top { margin-left: auto; font-weight: 700; padding: 6px 11px; }
+.login-pill { display: table; margin: 0 auto 10px; font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--accent-ui); background: rgba(var(--accent-rgb), .12); border: 1px solid rgba(var(--accent-rgb), .32); padding: 3px 10px; border-radius: 999px; }
+.login-sep { border: 0; border-top: 1px solid var(--border-soft); margin: 16px 0 12px; }
