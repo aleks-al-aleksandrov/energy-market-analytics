@@ -1,0 +1,2 @@
+wind_mae_mw,wind_bias_mw,wind_mae_pct_of_mean,solar_mae_mw,solar_bias_mw,solar_mae_pct_of_mean,solar_err_r2_vs_weather_err,wind_err_r2_vs_weather_err
+65.57588614330116,30.97288918092705,42.52174495057579,240.87548846388955,44.41419508680974,37.38456611063656,0.0005768473766798093,0.017231883112866046

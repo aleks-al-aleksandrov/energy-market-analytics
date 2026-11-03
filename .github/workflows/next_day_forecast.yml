@@ -1,0 +1,55 @@
+# Daily next-day forecast (stretch tier).
+# Needs the repository secret ENTSOE_API_KEY (and optionally OILPRICE_API_KEY). Raw data and trained models are kept in
+# the Actions cache, so only the latest month is re-downloaded on each run.
+name: next-day-forecast
+
+on:
+  schedule:
+    - cron: "0 8 * * *"     # 08:00 UTC = before the 12:00 CET day-ahead gate closure
+    - cron: "0 3 * * 1"     # Mondays: full retrain (expanding window)
+  workflow_dispatch:
+    inputs:
+      retrain:
+        description: "Retrain all models first"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
+      OILPRICE_API_KEY: ${{ secrets.OILPRICE_API_KEY }}   # optional: daily TTF history keeps growing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+      - name: Restore data and models
+        uses: actions/cache@v4
+        with:
+          path: |
+            data/raw
+            models
+          key: ema-${{ github.run_id }}
+          restore-keys: ema-
+      - name: Retrain (weekly, on demand, or when no model exists)
+        if: github.event.schedule == '0 3 * * 1' || inputs.retrain || hashFiles('models/final_models.joblib') == ''
+        run: python -m src.run_all --plus
+      - name: Forecast next delivery day
+        run: python -m src.predict_next_day
+      - name: Publish forecast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f reports/forecast_next_day.csv reports/ttf_snapshots.csv reports/forecast_log.csv reports/live_track_record.csv reports/outage_pit.csv
+          git commit -m "Next-day forecast $(date -u +%Y-%m-%d)" || echo "no change"
+          git push

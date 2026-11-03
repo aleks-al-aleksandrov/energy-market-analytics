@@ -1,0 +1,7 @@
+{
+  "window_days": 180,
+  "a_lo": 0.04791473750288928,
+  "a_hi": 26.460490693466173,
+  "as_of": "2026-10-31",
+  "rule": "90 % conformal quantile of recent one-sided misses; window chosen on CV months only"
+}

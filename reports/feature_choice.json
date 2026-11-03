@@ -1,0 +1,11 @@
+{
+  "months": "2025-08..2026-07",
+  "cv_mae_base": 20.127402741482165,
+  "rule": "greedy: adopt a group iff CV MAE (last 12 CV months) improves on the groups adopted so far",
+  "use_capacity": false,
+  "cv_mae_without_capacity": 20.127402741482165,
+  "cv_mae_with_capacity": 20.5345048931452,
+  "use_fuels": false,
+  "cv_mae_without_fuels": 20.127402741482165,
+  "cv_mae_with_fuels": 20.601460459878165
+}

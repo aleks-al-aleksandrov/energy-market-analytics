@@ -1,0 +1,4 @@
+{
+  "min_expected_profit_eur_per_mw_day": 0.0,
+  "rule": "chosen on CV months only"
+}

@@ -1,0 +1,86 @@
+{
+  "calendar": [
+    "hour",
+    "dow",
+    "month",
+    "is_weekend",
+    "is_holiday",
+    "is_bridge",
+    "hour_sin",
+    "hour_cos",
+    "month_sin",
+    "month_cos"
+  ],
+  "price_lags": [
+    "price_lag24",
+    "price_lag48",
+    "price_lag168",
+    "price_lag336",
+    "price_lag504",
+    "price_d1_mean",
+    "price_d1_std",
+    "price_d1_min",
+    "price_d1_max",
+    "price_same_wd_mean3",
+    "price_7d_mean",
+    "price_7d_std"
+  ],
+  "neighbours": [
+    "price_RO_lag24",
+    "spread_BG_RO_lag24",
+    "price_RO_d1_mean",
+    "price_GR_lag24",
+    "spread_BG_GR_lag24",
+    "price_GR_d1_mean",
+    "price_HU_lag24",
+    "spread_BG_HU_lag24",
+    "price_HU_d1_mean"
+  ],
+  "system_forecasts": [
+    "load_forecast",
+    "wind_forecast",
+    "solar_forecast",
+    "residual_load_forecast",
+    "res_load_ratio",
+    "res_load_d_mean",
+    "res_load_d_ramp"
+  ],
+  "capacity": [
+    "ntc_RO_to_BG",
+    "ntc_BG_to_RO",
+    "ntc_GR_to_BG",
+    "ntc_BG_to_GR",
+    "ntc_import_total",
+    "ntc_export_total"
+  ],
+  "flows": [
+    "net_import_d2_mean"
+  ],
+  "weather": [
+    "wfc_temp_sofia",
+    "wfc_wind100_sofia",
+    "wfc_rad_sofia",
+    "wfc_cloud_sofia",
+    "wfc_temp_dobrich",
+    "wfc_wind100_dobrich",
+    "wfc_rad_dobrich",
+    "wfc_cloud_dobrich",
+    "wfc_temp_stara_zagora",
+    "wfc_wind100_stara_zagora",
+    "wfc_rad_stara_zagora",
+    "wfc_cloud_stara_zagora"
+  ],
+  "fuels": [
+    "fuel_brent_usd",
+    "fuel_brent_chg20",
+    "fuel_carbon_idx",
+    "fuel_carbon_chg20",
+    "fuel_gas_eur_mwh",
+    "fuel_gas_rel12",
+    "fuel_gas_chg3",
+    "fuel_gas_cost_ccgt",
+    "fuel_ttf_eur_mwh",
+    "fuel_ttf_chg20",
+    "fuel_ttf_vs_gasm"
+  ]
+}

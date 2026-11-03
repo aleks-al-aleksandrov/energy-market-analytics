@@ -1,0 +1,9 @@
+feature,psi,status
+load_forecast,0.9125795446887278,significant shift
+wind_forecast,0.03821866486666604,stable
+solar_forecast,0.41332746901438455,significant shift
+residual_load_forecast,0.8825719208735145,significant shift
+price_lag24,2.073951613297001,significant shift
+price_RO_lag24,2.2415681623522223,significant shift
+fuel_gas_eur_mwh,5.709385850566615,significant shift
+fuel_brent_usd,5.1480111801013155,significant shift

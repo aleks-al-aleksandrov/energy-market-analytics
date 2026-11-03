@@ -1,0 +1,8 @@
+# Lightweight dependencies for the dashboard only (e.g. Streamlit Community Cloud, entry point app/dashboard.py).
+# The dashboard reads the committed files in reports/ and never calls an API. The full pipeline needs ../requirements.txt.
+streamlit>=1.50
+plotly>=5.24
+pandas>=2.2
+numpy>=1.26
+scipy>=1.11
+pyarrow>=15

@@ -1,0 +1,19 @@
+# secrets
+.env
+
+# data & artifacts
+data/
+mlruns/
+mlflow.db
+models/
+
+# environments
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+
+
+# local tooling
+.claude/
