@@ -12,6 +12,12 @@ ENTSO-E Transparency Platform and Open-Meteo. The project has two layers:
 > A forecast only matters if it makes or saves money. Every model result here is converted into
 > battery revenue and compared with a naive rule.
 
+## Dashboard Preview
+
+| Market Overview | Day-Ahead Forecast & Uncertainty | Battery Value & Dispatch |
+| :---: | :---: | :---: |
+| ![Market Overview](reports/figures/dashboard_overview.png) | ![Day-Ahead Forecast](reports/figures/dashboard_forecast.png) | ![Battery Value](reports/figures/dashboard_battery.png) |
+
 ## At a glance
 
 * **What works:** next-day hourly BG price forecasts that beat "same hour yesterday" by **21–23 %** over 25 walk-forward
