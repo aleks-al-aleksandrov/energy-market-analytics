@@ -342,16 +342,27 @@ NAV = [("home.py", "Home", ":material/home:", "Home"), ("overview.py", "Overview
        ("views/7_About.py", "About", ":material/info:", "About")]
 
 
+PRIMARY = {"Home", "Market Overview", "Trader Brief", "Forecast", "Battery Simulation"}   # shown inline; every page is in the "All pages" menu
+BOLT = ("<svg viewBox='0 0 24 24' width='60%' height='60%' fill='currentColor' aria-hidden='true' focusable='false'>"
+        "<path d='M13.2 2 4.5 13.4h6L9.6 22l9-11.6h-6z'/></svg>")
+
+
 def chrome(active: str = "") -> None:
-    """One fixed header: brand, the page links (a single scrollable row), and a Settings menu (theme, language, status, sign-out)."""
+    """One fixed header: brand, five primary page links, an "All pages" menu that always lists every page, and Settings."""
     import auth
     with st.container(key="topbar"):
-        st.markdown("<div class='brand' id='top'><div class='brand-mark' aria-hidden='true'>⚡</div>"
+        st.markdown(f"<div class='brand' id='top'><div class='brand-mark'>{BOLT}</div>"
                     "<div class='brand-text'><div class='brand-name'>BG Power</div><div class='brand-sub'>SDAC · EET</div></div></div>", unsafe_allow_html=True)
         with st.container(key="topnav"):
             for i, (path, label, icon, page_title) in enumerate(NAV):
-                with st.container(key=f"nav_{i}{'_current' if page_title == active else ''}"):
-                    link(path, label, icon=icon, width="content")
+                if page_title in PRIMARY or page_title == active:
+                    with st.container(key=f"nav_{i}{'_current' if page_title == active else ''}"):
+                        link(path, label, icon=icon, width="content")
+            with st.container(key=f"allpages{'_current' if active and active not in PRIMARY else ''}"):
+                with st.popover(tr("All pages"), icon=":material/apps:"):
+                    for i, (path, label, icon, page_title) in enumerate(NAV):
+                        with st.container(key=f"menuitem_{i}{'_current' if page_title == active else ''}"):
+                            link(path, label, icon=icon, width="stretch")
         with st.container(key="settings"):
             with st.popover(tr("Settings"), icon=":material/tune:"):
                 st.markdown(f"<div class='pop-label'>{tr('Theme')}</div>", unsafe_allow_html=True)
@@ -387,7 +398,7 @@ def login_page(attempt, multi_user: bool, locked: float) -> None:
     inject_css()
     _share_url_params()
     with st.container(key="login"):
-        st.markdown(f"<div class='login-brand'><div class='brand-mark' aria-hidden='true'>⚡</div></div>"
+        st.markdown(f"<div class='login-brand'><div class='brand-mark'>{BOLT}</div></div>"
                     f"<h1 class='login-title'>{tr('Welcome back')}</h1>"
                     f"<p class='login-sub'>{tr('Sign in to open the Bulgarian day-ahead power dashboard.')}</p>", unsafe_allow_html=True)
         if attempt is None:
@@ -458,7 +469,10 @@ def toc(items: list[tuple[str, str]]) -> None:
 def link(path: str, label: str, icon: str = ":material/arrow_forward:", width: str = "stretch", **kw) -> None:
     """st.page_link that degrades to nothing when the page is rendered outside the navigation (tests, direct runs)."""
     try:
-        st.page_link(path, label=tr(label), icon=icon, width=width, **kw)
+        try:
+            st.page_link(path, label=tr(label), icon=icon, width=width, **kw)
+        except TypeError:   # an older Streamlit without the `width` argument must still show the link
+            st.page_link(path, label=tr(label), icon=icon, **kw)
     except Exception:       # StreamlitPageNotFoundError when there is no st.navigation
         pass
 

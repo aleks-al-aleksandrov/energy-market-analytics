@@ -33,3 +33,25 @@ def test_header_marks_the_current_page():
     # the keyed container for the Battery link carries the "_current" suffix
     import theme as T
     assert [t for *_, t in T.NAV].count("Battery Simulation") == 1
+
+
+def test_every_page_is_reachable_from_the_header():
+    """Inline links are a short primary set; the 'All pages' menu must list every page so nothing can be clipped away."""
+    import theme as T
+    titles = [t for *_, t in T.NAV]
+    assert T.PRIMARY <= set(titles) and 3 <= len(T.PRIMARY) <= 6      # few enough to fit at laptop widths, in any language
+    assert len(titles) == len(set(titles)) == 11
+
+
+def test_page_link_falls_back_without_width(monkeypatch):
+    import streamlit as st
+    import theme as T
+    calls = []
+
+    def fake(path, label=None, icon=None, **kw):
+        calls.append(kw)
+        if "width" in kw:
+            raise TypeError("unexpected keyword argument 'width'")
+    monkeypatch.setattr(st, "page_link", fake)
+    T.link("home.py", "Home", width="content")
+    assert len(calls) == 2 and "width" not in calls[1]          # the second try still renders the link

@@ -1033,6 +1033,7 @@ BG: dict[str, str] = {
     'Prices, load, wind and solar forecasts, flows and weather from ENTSO-E and Open-Meteo.': 'Цени, потребление, прогнози за вятър и слънце, потоци и време от ENTSO-E и Open-Meteo.',
     'See tomorrow': 'Виж утре',
     'Settings': 'Настройки',
+    'All pages': 'Всички страници',
     'Settle a battery schedule at the real prices to see what the forecast is worth.': 'Отчитане на график на батерия по реалните цени, за да се види колко струва прогнозата.',
     'Test': 'Тест',
     'The Overview animates how the daily price shape changed month by month.': 'Прегледът анимира как се е променяла дневната ценова форма месец след месец.',
