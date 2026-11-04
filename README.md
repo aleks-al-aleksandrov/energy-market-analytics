@@ -1,5 +1,11 @@
 # Bulgarian Day-Ahead Electricity Market: Analytics, Forecasting and Flexibility Value
 
+[![ci](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/ci.yml)
+[![next-day-forecast](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml/badge.svg)](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml)
+![python](https://img.shields.io/badge/python-3.12-blue) ![license](https://img.shields.io/badge/license-MIT-green)
+
+**Live dashboard:** https://energy-market-analytics-1.streamlit.app/ (sign-in required; see *Sign-in* below)
+
 Market analytics and machine learning on the Bulgarian (BG) day-ahead power market, built on the
 ENTSO-E Transparency Platform and Open-Meteo. The project has two layers:
 
@@ -416,7 +422,7 @@ reflows down to phone width. The headless smoke test renders every page.
 **Navigation and home.** One fixed header carries the brand, a single row of page links (current page highlighted; scrollable on phones, with the current page first) and a *Settings* menu (theme, language, data status, sign-out). Theme and language are kept in plain session keys, so they survive page switches; `EMA_AUTH_DISABLED=1` switches the sign-in off for local development only. The default page is **Home**: what the project is, three numbers computed from the
 reports, a card for every page, how it works, and what makes it honest, with the same limits stated as on the other pages.
 
-**Optional sign-in** (`app/auth.py`). Off until you configure credentials, so local runs and tests need nothing. To protect a deployed
+**Sign-in** (`app/auth.py`). On by default and fail-closed: until credentials exist in Secrets (or `EMA_AUTH_*` variables) nobody can sign in, so a forgotten secret never leaves a hosted copy open. For local work set `EMA_AUTH_DISABLED=1` (never online). To protect a deployed
 app, create a hash with `python -m src.make_password_hash` and put it in `.streamlit/secrets.toml` (Community Cloud: App settings, Secrets):
 
 ```toml
