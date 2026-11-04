@@ -30,5 +30,5 @@ nav = st.navigation({
     tr("Value"): [st.Page(P / "6_Battery.py", url_path="battery", title=tr("Battery Simulation"), icon=":material/battery_charging_full:"),
                   st.Page(P / "8_Beat_the_Model.py", url_path="play", title=tr("Beat the Model"), icon=":material/sports_esports:"),
                   st.Page(P / "7_About.py", url_path="about", title=tr("About / Method"), icon=":material/info:")],
-}, position="top")
+}, position="hidden")
 nav.run()

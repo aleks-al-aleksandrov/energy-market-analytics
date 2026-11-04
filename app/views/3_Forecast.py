@@ -40,7 +40,7 @@ T.toc([("next-day", "Next day"), ("explorer", "Back-test explorer"), ("failures"
 # --- next-day forecast -------------------------------------------------------------------------------------------------------------------
 if nd is not None and len(nd):
     T.section(f"Next-day forecast · delivery {pd.Timestamp(nd['delivery_day'].iloc[0]):%A %d %B %Y}", anchor="next-day", subtitle=
-              f"Generated {nd['generated_at'].iloc[0]} · model trained until {nd['model_trained_until'].iloc[0]} · `python -m src.predict_next_day`")
+              f"Generated {nd['generated_at'].iloc[0]} · model trained until {nd['model_trained_until'].iloc[0]} · <code>python -m src.predict_next_day</code>")
     f = nd["forecast_eur_mwh"]
     hrs = nd["time_local"].str[-5:]
     peak = f.iloc[7:19] if len(f) >= 19 else f

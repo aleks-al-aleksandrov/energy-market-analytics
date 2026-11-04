@@ -281,21 +281,35 @@ def _slug(s: str) -> str:
 
 # --- page chrome ---------------------------------------------------------------------------------------------------------
 def _init_state() -> None:
-    """First run of a session: theme and language from the URL (?theme=light&lang=bg), else the browser language."""
+    """Theme and language preferences live in plain session keys (`_pref_theme`, `_pref_lang`).
+
+    Widget keys cannot be the source of truth: Streamlit scopes widget state to the page that rendered it, so switching pages
+    used to reset the theme to dark. First run: URL (?theme=light&lang=bg), else the browser language.
+    """
     ss = st.session_state
-    if "_ui_init" in ss:
-        return
-    qp = st.query_params
-    want_lang = (qp.get("lang") or "").lower()
-    if want_lang not in ("en", "bg"):
-        try:
-            want_lang = "bg" if str(getattr(st.context, "locale", "") or "").lower().startswith("bg") else "en"
-        except Exception:
-            want_lang = "en"
-    want_theme = (qp.get("theme") or "").lower()
-    ss["ui_lang"] = "BG" if want_lang == "bg" else "EN"
-    ss["ui_theme"] = "Light" if want_theme == "light" else "Dark"
-    ss["_ui_init"] = True
+    if "_pref_theme" not in ss:
+        qp = st.query_params
+        if "_ui_init" in ss:                       # tests pre-set the widget values
+            ss["_pref_theme"], ss["_pref_lang"] = ss.get("ui_theme", "Dark"), ss.get("ui_lang", "EN")
+        else:
+            want_lang = (qp.get("lang") or "").lower()
+            if want_lang not in ("en", "bg"):
+                try:
+                    want_lang = "bg" if str(getattr(st.context, "locale", "") or "").lower().startswith("bg") else "en"
+                except Exception:
+                    want_lang = "en"
+            ss["_pref_lang"] = "BG" if want_lang == "bg" else "EN"
+            ss["_pref_theme"] = "Light" if (qp.get("theme") or "").lower() == "light" else "Dark"
+    # the widgets (created later in this run) start from the stored preference
+    ss["ui_theme"], ss["ui_lang"] = ss["_pref_theme"], ss["_pref_lang"]
+
+
+def _remember_theme() -> None:
+    st.session_state["_pref_theme"] = st.session_state.get("ui_theme") or st.session_state["_pref_theme"]
+
+
+def _remember_lang() -> None:
+    st.session_state["_pref_lang"] = st.session_state.get("ui_lang") or st.session_state["_pref_lang"]
 
 
 def bootstrap() -> None:
@@ -304,8 +318,8 @@ def bootstrap() -> None:
     install_hooks()
     _init_state()
     ss = st.session_state
-    ss["_lang"] = "bg" if ss.get("ui_lang") == "BG" else "en"
-    ss["_mode"] = "light" if ss.get("ui_theme") == "Light" else "dark"
+    ss["_lang"] = "bg" if ss["_pref_lang"] == "BG" else "en"
+    ss["_mode"] = "light" if ss["_pref_theme"] == "Light" else "dark"
 
 
 def inject_css() -> None:
@@ -320,29 +334,42 @@ def _share_url_params() -> None:
             st.query_params[k] = v
 
 
-def chrome() -> None:
-    """Brand mark at the left of the header and a Settings popover at the right (theme, language, data status, sign-out)."""
+NAV = [("home.py", "Home", ":material/home:", "Home"), ("overview.py", "Overview", ":material/monitoring:", "Market Overview"),
+       ("views/0_Trader_Brief.py", "Brief", ":material/assignment:", "Trader Brief"), ("views/1_Price_Drivers.py", "Drivers", ":material/bolt:", "Price Drivers"),
+       ("views/2_Cross_Border.py", "Cross-border", ":material/compare_arrows:", "Cross-Border"), ("views/3_Forecast.py", "Forecast", ":material/query_stats:", "Forecast"),
+       ("views/4_Weather_Uncertainty.py", "Weather", ":material/partly_cloudy_day:", "Weather Uncertainty"), ("views/5_Model_Lab.py", "Model Lab", ":material/science:", "Model Lab"),
+       ("views/6_Battery.py", "Battery", ":material/battery_charging_full:", "Battery Simulation"), ("views/8_Beat_the_Model.py", "Play", ":material/sports_esports:", "Beat the Model"),
+       ("views/7_About.py", "About", ":material/info:", "About")]
+
+
+def chrome(active: str = "") -> None:
+    """One fixed header: brand, the page links (a single scrollable row), and a Settings menu (theme, language, status, sign-out)."""
     import auth
-    with st.container(key="brandbar"):
-        st.markdown("<div class='brand' id='top'><div class='brand-mark' aria-hidden='true'>⚡</div><div><div class='brand-name'>BG Power</div><div class='brand-sub'>SDAC · EET</div></div></div>", unsafe_allow_html=True)
-    with st.container(key="settings"):
-        with st.popover(tr("Settings"), icon=":material/tune:"):
-            st.markdown(f"<div class='pop-label'>{tr('Theme')}</div>", unsafe_allow_html=True)
-            st.segmented_control("Theme", ["Dark", "Light"], key="ui_theme", default="Dark", label_visibility="collapsed",
-                                 help="Dark or light colours. Charts use a separate, validated palette for each.", width="stretch")
-            st.markdown(f"<div class='pop-label'>{tr('Language')}</div>", unsafe_allow_html=True)
-            st.segmented_control("Language", ["EN", "BG"], key="ui_lang", default="EN", label_visibility="collapsed",
-                                 help="Interface language. Computed numbers and chart data are the same in both.", width="stretch")
-            m = load_market()
-            through = tr(f"Data through {m.index.max():%d %b %Y}") if m is not None else tr("No data loaded")
-            st.markdown(f"<div class='side-meta' role='status'><span class='dot' aria-hidden='true'></span>{through}<br>"
-                        f"ENTSO-E · Open-Meteo<br><span class='side-hint'>{tr('Every chart has a <b>Table view</b> and CSV download.')}</span></div>",
-                        unsafe_allow_html=True)
-            if auth.enabled() and auth.user():
-                st.caption(f"{tr('Signed in as')} {auth.user()}")
-                if st.button("Sign out", key="signout", icon=":material/logout:", width="stretch"):
-                    auth.logout()
-                    st.rerun()
+    with st.container(key="topbar"):
+        st.markdown("<div class='brand' id='top'><div class='brand-mark' aria-hidden='true'>⚡</div>"
+                    "<div class='brand-text'><div class='brand-name'>BG Power</div><div class='brand-sub'>SDAC · EET</div></div></div>", unsafe_allow_html=True)
+        with st.container(key="topnav"):
+            for i, (path, label, icon, page_title) in enumerate(NAV):
+                with st.container(key=f"nav_{i}{'_current' if page_title == active else ''}"):
+                    link(path, label, icon=icon, width="content")
+        with st.container(key="settings"):
+            with st.popover(tr("Settings"), icon=":material/tune:"):
+                st.markdown(f"<div class='pop-label'>{tr('Theme')}</div>", unsafe_allow_html=True)
+                st.segmented_control("Theme", ["Dark", "Light"], key="ui_theme", label_visibility="collapsed", on_change=_remember_theme,
+                                     help="Dark or light colours. Charts use a separate, validated palette for each.", width="stretch")
+                st.markdown(f"<div class='pop-label'>{tr('Language')}</div>", unsafe_allow_html=True)
+                st.segmented_control("Language", ["EN", "BG"], key="ui_lang", label_visibility="collapsed", on_change=_remember_lang,
+                                     help="Interface language. Computed numbers and chart data are the same in both.", width="stretch")
+                m = load_market()
+                through = tr(f"Data through {m.index.max():%d %b %Y}") if m is not None else tr("No data loaded")
+                st.markdown(f"<div class='side-meta' role='status'><span class='dot' aria-hidden='true'></span>{through}<br>"
+                            f"ENTSO-E · Open-Meteo<br><span class='side-hint'>{tr('Every chart has a <b>Table view</b> and CSV download.')}</span></div>",
+                            unsafe_allow_html=True)
+                if auth.enabled() and auth.user():
+                    st.caption(f"{tr('Signed in as')} {auth.user()}")
+                    if st.button("Sign out", key="signout", icon=":material/logout:", width="stretch"):
+                        auth.logout()
+                        st.rerun()
 
 
 def setup(title: str, icon: str = "⚡") -> None:
@@ -351,7 +378,7 @@ def setup(title: str, icon: str = "⚡") -> None:
     inject_css()
     _CURRENT.update(title="", subtitle="", n=0)
     _share_url_params()
-    chrome()
+    chrome(title)
 
 
 def login_page(attempt, multi_user: bool, locked: float) -> None:
@@ -361,11 +388,10 @@ def login_page(attempt, multi_user: bool, locked: float) -> None:
     _share_url_params()
     with st.container(key="login"):
         st.markdown(f"<div class='login-brand'><div class='brand-mark' aria-hidden='true'>⚡</div></div>"
-                    f"<div class='login-pill'>ENTSO-E · Open-Meteo · BG</div>"
                     f"<h1 class='login-title'>{tr('Welcome back')}</h1>"
                     f"<p class='login-sub'>{tr('Sign in to open the Bulgarian day-ahead power dashboard.')}</p>", unsafe_allow_html=True)
         with st.form("login_form", border=False):
-            user = st.text_input("Username", key="login_user", autocomplete="username") if multi_user else ""
+            user = st.text_input("Username", key="login_user", autocomplete="username", placeholder="") if multi_user else ""
             pw = st.text_input("Password", type="password", key="login_pw", autocomplete="current-password")
             go_ = st.form_submit_button("Sign in", type="primary", width="stretch", disabled=locked > 0)
         if locked > 0:
@@ -375,10 +401,10 @@ def login_page(attempt, multi_user: bool, locked: float) -> None:
             if err is None:
                 st.rerun()
             st.error(tr(err))
-        st.markdown("<hr class='login-sep'>", unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        c1.segmented_control("Theme", ["Dark", "Light"], key="ui_theme", default="Dark", label_visibility="collapsed", width="stretch")
-        c2.segmented_control("Language", ["EN", "BG"], key="ui_lang", default="EN", label_visibility="collapsed", width="stretch")
+        with st.container(key="loginprefs"):
+            c1, c2 = st.columns(2)
+            c1.segmented_control("Theme", ["Dark", "Light"], key="ui_theme", label_visibility="collapsed", on_change=_remember_theme, width="stretch")
+            c2.segmented_control("Language", ["EN", "BG"], key="ui_lang", label_visibility="collapsed", on_change=_remember_lang, width="stretch")
         st.markdown(f"<p class='login-foot'>{tr('Forecasts and analysis only. This is not trading or investment advice.')}</p>", unsafe_allow_html=True)
 
 
@@ -423,10 +449,10 @@ def toc(items: list[tuple[str, str]]) -> None:
         st.markdown(f"<nav class='toc' aria-label='{tr('On this page')}'><span class='toc-label'>{tr('On this page')}</span>{links}{top_link}</nav>", unsafe_allow_html=True)
 
 
-def link(path: str, label: str, icon: str = ":material/arrow_forward:", **kw) -> None:
+def link(path: str, label: str, icon: str = ":material/arrow_forward:", width: str = "stretch", **kw) -> None:
     """st.page_link that degrades to nothing when the page is rendered outside the navigation (tests, direct runs)."""
     try:
-        st.page_link(path, label=tr(label), icon=icon, width="stretch", **kw)
+        st.page_link(path, label=tr(label), icon=icon, width=width, **kw)
     except Exception:       # StreamlitPageNotFoundError when there is no st.navigation
         pass
 

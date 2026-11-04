@@ -413,8 +413,7 @@ marks, thin marks, direct labels plus a legend, and no dual axes. Page titles an
 from the data, not typed in. Filters sit in one bar above the content they scope. Every chart has a *Table view* with CSV download and
 a screen-reader description; text meets WCAG AA contrast, focus is visible, touch targets are 44 px on small screens, and the layout
 reflows down to phone width. The headless smoke test renders every page.
-**Navigation and home.** The pages sit in a top navigation bar (Start, Market, Models, Value) with a *Settings* menu at the right of the
-header (theme, language, data status, sign-out). The default page is **Home**: what the project is, three numbers computed from the
+**Navigation and home.** One fixed header carries the brand, a single row of page links (current page highlighted; scrollable on phones, with the current page first) and a *Settings* menu (theme, language, data status, sign-out). Theme and language are kept in plain session keys, so they survive page switches; `EMA_AUTH_DISABLED=1` switches the sign-in off for local development only. The default page is **Home**: what the project is, three numbers computed from the
 reports, a card for every page, how it works, and what makes it honest, with the same limits stated as on the other pages.
 
 **Optional sign-in** (`app/auth.py`). Off until you configure credentials, so local runs and tests need nothing. To protect a deployed

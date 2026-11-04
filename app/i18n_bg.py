@@ -1065,4 +1065,9 @@ BG: dict[str, str] = {
     'previous year': 'предишна година',
     'a year earlier <b>%{y:.1f}</b><extra></extra>': 'преди година <b>%{y:.1f}</b><extra></extra>',
     'Back to top': 'Нагоре',
+    'Overview': 'Преглед',
+    'Brief': 'Бриф',
+    'Drivers': 'Фактори',
+    'Weather': 'Време',
+    'Battery': 'Батерия',
 }

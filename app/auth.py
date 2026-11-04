@@ -78,6 +78,8 @@ def _config() -> dict:
 
 
 def enabled() -> bool:
+    if os.getenv("EMA_AUTH_DISABLED") == "1":          # local development only; never set this on a hosted copy
+        return False
     c = _config()
     return bool(c["password"] or c["users"])
 
