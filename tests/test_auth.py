@@ -24,11 +24,24 @@ def test_plain_text_fallback_is_still_constant_time_compare():
     assert auth.check_password("abc", "abc") and not auth.check_password("abd", "abc")
 
 
-def test_disabled_without_configuration(monkeypatch):
+def test_fails_closed_without_configuration(monkeypatch):
     monkeypatch.delenv("EMA_AUTH_PASSWORD", raising=False)
     monkeypatch.delenv("EMA_AUTH_USERS", raising=False)
+    monkeypatch.delenv("EMA_AUTH_DISABLED", raising=False)
     monkeypatch.setattr(auth, "_config", lambda: {"password": None, "users": {}})
-    assert not auth.enabled()
+    assert auth.enabled() and not auth.configured()
+    assert not auth.verify("anyone", "anything")
+
+
+def test_unconfigured_entry_shows_setup_notice_not_the_dashboard(monkeypatch):
+    monkeypatch.delenv("EMA_AUTH_PASSWORD", raising=False)
+    monkeypatch.delenv("EMA_AUTH_USERS", raising=False)
+    monkeypatch.delenv("EMA_AUTH_DISABLED", raising=False)
+    monkeypatch.setattr(auth, "_config", lambda: {"password": None, "users": {}})
+    at = AppTest.from_file(str(APP / "dashboard.py"), default_timeout=120)
+    at.session_state["_pref_theme"], at.session_state["_pref_lang"] = "Dark", "EN"
+    at.run()
+    assert not at.exception and not at.text_input and any("not configured" in e.value for e in at.error)
 
 
 def test_user_table_and_unknown_user(monkeypatch):
@@ -36,13 +49,6 @@ def test_user_table_and_unknown_user(monkeypatch):
     monkeypatch.setattr(auth, "_config", lambda: cfg)
     assert auth.verify("alice", "alice-passphrase")
     assert not auth.verify("alice", "nope") and not auth.verify("mallory", "alice-passphrase")
-
-
-def test_configured_default_user_aleks13(monkeypatch):
-    monkeypatch.setattr(auth, "_config", lambda: {"password": None, "users": dict(auth._DEFAULT_USERS)})
-    assert auth.verify("aleks13", "bid56789")
-    assert not auth.verify("aleks13", "wrongpass")
-    assert not auth.verify("other", "bid56789")
 
 
 def _entry(monkeypatch):

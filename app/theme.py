@@ -390,6 +390,12 @@ def login_page(attempt, multi_user: bool, locked: float) -> None:
         st.markdown(f"<div class='login-brand'><div class='brand-mark' aria-hidden='true'>⚡</div></div>"
                     f"<h1 class='login-title'>{tr('Welcome back')}</h1>"
                     f"<p class='login-sub'>{tr('Sign in to open the Bulgarian day-ahead power dashboard.')}</p>", unsafe_allow_html=True)
+        if attempt is None:
+            st.error(tr("Sign-in is not configured yet. The owner must add credentials in the app's Secrets."))
+            st.code('[auth]\nusers = { alice = "pbkdf2_sha256$..." }', language="toml")
+            st.caption(tr("Create the hash with: python -m src.make_password_hash"))
+            st.markdown(f"<p class='login-foot'>{tr('Forecasts and analysis only. This is not trading or investment advice.')}</p>", unsafe_allow_html=True)
+            return
         with st.form("login_form", border=False):
             user = st.text_input("Username", key="login_user", autocomplete="username", placeholder="") if multi_user else ""
             pw = st.text_input("Password", type="password", key="login_pw", autocomplete="current-password")

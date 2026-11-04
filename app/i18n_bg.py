@@ -1070,4 +1070,6 @@ BG: dict[str, str] = {
     'Drivers': 'Фактори',
     'Weather': 'Време',
     'Battery': 'Батерия',
+    "Sign-in is not configured yet. The owner must add credentials in the app's Secrets.": 'Входът още не е настроен. Собственикът трябва да добави данни за вход в Secrets на приложението.',
+    'Create the hash with: python -m src.make_password_hash': 'Създайте хеша с: python -m src.make_password_hash',
 }

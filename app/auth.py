@@ -1,6 +1,6 @@
 """Optional sign-in for the dashboard.
 
-Access control is off until credentials are configured, so local development and the test-suite need nothing. To turn it on,
+Access control is on by default and fails closed: until credentials are configured nobody can sign in. For local development set EMA_AUTH_DISABLED=1 (never on a hosted copy). To turn it on,
 put either a shared password or per-user entries in `.streamlit/secrets.toml` (Streamlit Community Cloud: App settings -> Secrets)
 or in environment variables:
 
@@ -29,9 +29,6 @@ import streamlit as st
 ITERATIONS = 240_000
 MAX_FAILS = 5
 LOCK_SECONDS = 60
-_DEFAULT_USERS = {
-    "aleks13": "pbkdf2_sha256$240000$a5811f56ee2b06705136735446dfb1f6$440a63aca12857c513e815004cda096c2ebb1d0d5a2d4889a785e39dc4af9b28"
-}
 
 
 def make_hash(password: str, iterations: int = ITERATIONS) -> str:
@@ -72,16 +69,18 @@ def _config() -> dict:
         users = dict(a.get("users", {}) or {})
     except Exception:           # no secrets file
         pass
-    if not password and not users:
-        users = dict(_DEFAULT_USERS)
     return {"password": password, "users": users}
 
 
-def enabled() -> bool:
-    if os.getenv("EMA_AUTH_DISABLED") == "1":          # local development only; never set this on a hosted copy
-        return False
+def configured() -> bool:
     c = _config()
     return bool(c["password"] or c["users"])
+
+
+def enabled() -> bool:
+    """Access control is ON unless explicitly disabled for local development. Fail closed: with no credentials configured
+    nobody gets in, so a forgotten secret can never leave a hosted copy open."""
+    return os.getenv("EMA_AUTH_DISABLED") != "1"
 
 
 def verify(username: str, password: str) -> bool:
@@ -124,5 +123,8 @@ def gate(render_login) -> None:
             ss["_auth_lock"], ss["_auth_fails"] = time.time() + LOCK_SECONDS, 0
         return "Incorrect username or password."
 
-    render_login(attempt, bool(_config()["users"]), locked)
+    if not configured():
+        render_login(None, False, 0.0)
+    else:
+        render_login(attempt, bool(_config()["users"]), locked)
     st.stop()
