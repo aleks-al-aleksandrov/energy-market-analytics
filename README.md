@@ -1,53 +1,157 @@
-# Bulgarian Day-Ahead Electricity Market: Analytics, Forecasting and Flexibility Value
+<div align="center">
+
+# Bulgarian Day-Ahead Electricity Market
+
+### Analytics, honest forecasting and the value of flexibility
+
+Hourly price forecasts for Bulgaria that are tested without peeking at the answer, a plain account of what a battery
+could earn from them, and a bilingual dashboard (English / Bulgarian, dark / light) that shows every number and every failure.
 
 [![ci](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/ci.yml)
 [![next-day-forecast](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml/badge.svg)](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml)
-![python](https://img.shields.io/badge/python-3.12-blue) ![license](https://img.shields.io/badge/license-MIT-green)
+![python](https://img.shields.io/badge/python-3.12-blue)
+![streamlit](https://img.shields.io/badge/dashboard-Streamlit-ff4b4b)
+![tests](https://img.shields.io/badge/tests-91%20passing-brightgreen)
+![license](https://img.shields.io/badge/license-MIT-green)
 
-**Live dashboard:** https://energy-market-analytics-1.streamlit.app/ (sign-in required; see *Sign-in* below)
+**[Open the live dashboard](https://energy-market-analytics-1.streamlit.app/)** (sign-in required, see [Sign-in](#sign-in)) ·
+[Model card](MODEL_CARD.md) · [Notebooks](notebooks/)
 
-Market analytics and machine learning on the Bulgarian (BG) day-ahead power market, built on the
-ENTSO-E Transparency Platform and Open-Meteo. The project has two layers:
+<img src="reports/figures/dashboard_home.png" alt="Home page of the dashboard: tomorrow's forecast price, headline numbers and an hour-by-hour skyline" width="900">
 
-* **Analytics (Business Analyst):** what drives BG prices, how BG couples with RO / GR / HU, when prices
-  spike or go negative, and what flexibility is worth, in EUR.
-* **ML (Data Scientist):** next-day hourly price forecasts with walk-forward validation, tuning,
-  probabilistic forecasts, a spike classifier, SHAP, significance tests, experiment tracking and drift
-  monitoring.
+</div>
 
-> A forecast only matters if it makes or saves money. Every model result here is converted into
-> battery revenue and compared with a naive rule.
+## Why this project
 
-## Dashboard Preview
+A forecast only matters if it makes or saves money, and a result only matters if it survives an honest test. So this project:
 
-| Home | Market Overview (Bulgarian, light theme) |
-| :---: | :---: |
-| ![Home](reports/figures/dashboard_home.png) | ![Market Overview, Bulgarian, light](reports/figures/dashboard_light_bg.png) |
+* builds next-day hourly price forecasts for the Bulgarian (BG) market from **ENTSO-E** and **Open-Meteo** data;
+* validates them with **walk-forward cross-validation** (25 monthly folds) and an **untouched 3-month holdout**;
+* converts every forecast into **battery revenue** and compares it with a naive rule;
+* reports what **did not** work next to what did, with the rules for adopting any change fixed in advance.
 
-| Day-Ahead Forecast & Uncertainty | Battery Value & Dispatch |
-| :---: | :---: |
-| ![Day-Ahead Forecast](reports/figures/dashboard_forecast.png) | ![Battery Value](reports/figures/dashboard_battery.png) |
+Two layers: **analytics** (what drives BG prices, how BG couples with RO / GR / HU, when prices spike or go negative) and
+**machine learning** (LightGBM, Ridge, a neural net, quantile and conformal bands, a spike classifier, SHAP, significance
+tests, experiment tracking, drift monitoring).
 
-*Market Overview in English/dark is `reports/figures/dashboard_overview.png`. Screenshots are regenerated with headless Chrome against a running dashboard.*
+## Results at a glance
 
-## At a glance
+| | Result |
+|---|---|
+| **Forecast skill** | Beats "same hour yesterday" by **21 to 23 %** over 25 walk-forward months (95 % interval 17 to 26 %), statistically significant (Diebold-Mariano p < 0.001) |
+| **Uncertainty** | Calibrated 10 to 90 % band covers **80 %** of CV outcomes; a level-relative spike classifier gives about 7x lift over the base rate |
+| **Battery value** | About **EUR 100k per MW-year** with a forecast-guided 1 MW / 2 MWh battery, **88 %** of perfect foresight (naive rule: 83 %) |
+| **Honest caveat** | On the final holdout (Aug to Oct 2026, a price surge beyond the training range) the main model is only +2.7 % better than naive (95 % interval -10 % to +19 %, **not significant**) |
+| **What did not help** | Fuel and carbon prices, interconnector capacities and plant outages did not improve the forecast under a pre-set adoption rule; the neural net lost out of regime |
+| **How it is checked** | 91 automated tests (leakage tests on the whole feature builder, evaluation maths, walk-forward splits, battery physics, every dashboard page in two themes and two languages), CI on every push, data validation that stops the pipeline on bad inputs |
 
-* **What works:** next-day hourly BG price forecasts that beat "same hour yesterday" by **21–23 %** over 25 walk-forward
-  months (95 % interval 17–26 %), statistically significant; calibrated 10–90 % bands (80 % coverage on CV); a level-relative
-  spike classifier; a battery arbitrage case worth about **€100k per MW-year** (88 % of perfect foresight).
-* **What does not:** on the final 3-month holdout (Aug–Oct 2026, a price surge beyond the training range) the main model
-  is only +2.7 % better than naive (95 % interval −10 % to +19 %, not significant). Fuel and carbon prices, interconnector
-  capacities and plant outages did **not** improve the forecast when tested, and the neural net lost.
-* **How it is checked:** 54 automated tests (no-leakage tests for the whole feature builder, evaluation maths, walk-forward
-  splits, battery physics, data validation, every dashboard page), CI on every push, data validation that stops the pipeline on
-  broken inputs, a pre-set rule for adopting any new feature group, and a live track record that fills in from the first
-  scheduled run. Open `app/dashboard.py` → *Trader Brief* for the decision-oriented view.
+Details, tables and the reasoning behind each number are in [Headline results](#headline-results).
+
+## The dashboard
+
+<table>
+<tr>
+<td width="50%"><img src="reports/figures/dashboard_overview.png" alt="Market overview: tomorrow around the clock, hour ribbon and KPI tiles"><br><sub><b>Market Overview.</b> Tomorrow as a 24-hour dial and an hour ribbon, plus KPIs with sparklines.</sub></td>
+<td width="50%"><img src="reports/figures/dashboard_brief.png" alt="Trader brief: forecast turned into rule-based actions"><br><sub><b>Trader Brief.</b> The forecast turned into actions, with how far to trust it.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="reports/figures/dashboard_forecast.png" alt="Forecast page: back-test with calibrated band and error heatmap"><br><sub><b>Forecast.</b> Back-test with a calibrated band, next-day card, error heatmap, live track record.</sub></td>
+<td width="50%"><img src="reports/figures/dashboard_light_bg.png" alt="Market overview in Bulgarian with the light theme"><br><sub><b>Bulgarian, light theme.</b> Both are one click away in Settings and in the URL.</sub></td>
+</tr>
+</table>
+
+| Page | What it answers |
+|---|---|
+| **Home** | What the project is, three numbers computed from the reports, a card for every page |
+| **Overview** | KPIs, price chart and calendar; *Tomorrow around the clock* and *Ask the market* |
+| **Trader Brief** | Tomorrow's forecast as rule-based actions, a playbook, and warnings when models disagree |
+| **Price Drivers** | Residual load, generation mix, fuel and carbon |
+| **Cross-Border** | How often BG clears at the same price as RO, GR and HU, and when it decouples |
+| **Forecast** | Back-test, calibrated band, next-day card, error heatmap, live track record |
+| **Weather** | How much weather forecast error costs in price error |
+| **Model Lab** | Leaderboard with significance, regime robustness, SHAP, calibration, classifiers, drift |
+| **Battery** | Sliders, costs, Monte Carlo revenue risk, investment view, reserve capacity |
+| **Play** | *Beat the Model*: schedule a battery for a past day and see it settled against the models |
+| **About** | Method, data, limits and the weekly re-test status |
+
+**Design.** One fixed header with five primary links and an **All pages** menu that always lists every page; theme and language
+survive page switches; a validated colour-blind-safe chart palette for each theme; every chart has a *Table view* with CSV
+download; WCAG AA contrast, visible focus, 44 px touch targets on small screens, layout down to phone width.
+More in [Dashboard details](#dashboard-details).
+
+## Quick start
+
+**Run the dashboard only** (it reads the committed files in `reports/`, no API key needed):
+
+```bash
+git clone https://github.com/aleks-al-aleksandrov/energy-market-analytics.git
+cd energy-market-analytics
+pip install -r app/requirements.txt
+EMA_AUTH_DISABLED=1 streamlit run app/dashboard.py        # Windows PowerShell: $env:EMA_AUTH_DISABLED=1; streamlit run app/dashboard.py
+```
+
+`EMA_AUTH_DISABLED=1` switches the sign-in off for local work only. Never set it on a hosted copy.
+
+**Re-run the whole pipeline** (needs an [ENTSO-E API key](https://transparency.entsoe.eu/); about 15 minutes for the first download, about 45 minutes for the full model run on a laptop CPU):
+
+```bash
+python -m venv .venv && .venv\Scripts\activate          # Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+copy .env.example .env                                  # add ENTSOE_API_KEY (optional OILPRICE_API_KEY for daily TTF)
+python -m src.run_all --plus                            # ingest -> clean -> features -> models -> reports
+python -m src.build_notebooks                           # regenerate and execute notebooks/
+python -m pytest tests                                  # leakage, maths, physics, dashboard smoke tests
+streamlit run app/dashboard.py
+```
+
+<details>
+<summary><b>All commands</b> (tuning, calibration, experiments, tracking)</summary>
+
+```bash
+python -m src.tune --trials 50                          # Optuna (time-based CV, holdout untouched)
+python -m src.calibrate                                 # conformal recalibration of the 10-90 % band
+python -m src.robust_experiment                         # regime-robust variants, bootstrap intervals, level-shift episodes
+python -m src.battery_study                             # degradation, confidence filter, reserve stacking
+python -m src.montecarlo                                # Monte Carlo battery-revenue scenarios + calibration back-test
+python -m src.outage_experiment                         # optional: value of (leaky) outage knowledge, CV only
+python -m src.retest_optional [--groups]                # are outages testable yet? --groups re-runs capacity/fuels
+python -m src.fuel_experiment                           # optional: do fuel/carbon features help? (CV only)
+python -m src.predict_next_day                          # reports/forecast_next_day.csv
+mlflow ui --backend-store-uri sqlite:///mlflow.db       # experiment tracking
+```
+
+Downloads are cached month by month in `data/raw/` as Parquet, so re-running never downloads a chunk twice.
+
+</details>
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[ENTSO-E<br/>prices, load, wind, solar, flows] --> C[Clean and align<br/>UTC, hourly, validated]
+    B[Open-Meteo<br/>D-1 weather forecasts] --> C
+    C --> D[Gate-closure-safe<br/>features]
+    D --> E[Models<br/>naive, Ridge, LightGBM, MLP, ensemble]
+    E --> F[Walk-forward CV<br/>+ untouched holdout]
+    F --> G[Quantiles, conformal bands,<br/>spike classifier, SHAP]
+    E --> H[Battery optimiser<br/>+ Monte Carlo revenue risk]
+    G --> I[(reports/)]
+    H --> I
+    I --> J[Streamlit dashboard<br/>EN / BG, dark / light]
+    I --> K[Daily forecast +<br/>live track record]
+```
+
+The design rule behind everything: **the information set at gate closure (12:00 CET on D-1)**. No same-day actual
+quantity is ever a feature, and tests change every future price, flow and weather value to prove the features do not move.
+
+---
 
 ## Headline results
 
 Data: 2023-01-01 to 2026-10-31, hourly (33,600 hours). Walk-forward CV covers 25 monthly folds
 (2024-07 to 2026-07). The final holdout is 2026-08 to 2026-10. All numbers are in EUR/MWh unless stated
 otherwise, and every number below is regenerated by `python -m src.run_all --plus`.
+
 
 ### Market insights (notebook 02, dashboard pages 1–3)
 
@@ -111,7 +215,10 @@ Other ML results:
   PR-AUC 0.50 vs 2.1 % (about 24× lift) with recall 0.94 and precision 0.38. **Negative-price classifier:** CV
   PR-AUC 0.56 vs a 1.9 % base rate; only 8 negative hours on the holdout, so that result is not informative.
 
-### Fuel and carbon prices: do they help? (`src/fuels.py`, `src/fuel_experiment.py`)
+<details>
+<summary><b>Fuel and carbon prices: do they help?</b> (tested twice, adoption rule not met)</summary>
+
+Code: `src/fuels.py`, `src/fuel_experiment.py`.
 
 ENTSO-E carries no fuel or carbon prices, and the autumn-2026 surge (TTF about €104/MWh, up from €71 at the end of
 September; Brent about $118) is exactly what the models missed, so this was tested properly, twice.
@@ -159,7 +266,12 @@ No encoding beats "none"; the best alternative is −0.03 (noise) and daily TTF 
 *Generated from the MLflow tracking store (`src/tracking.py`). Run `mlflow ui --backend-store-uri
 sqlite:///mlflow.db` for the interactive comparison page.*
 
-### Confidence intervals and regime robustness (`src/robust_experiment.py`)
+</details>
+
+<details>
+<summary><b>Confidence intervals and the October problem</b> (regime robustness, bootstrap intervals)</summary>
+
+Code: `src/robust_experiment.py`.
 
 **Skill with 95 % intervals** (moving-block bootstrap over delivery days, blocks of 7 days, 2,000 resamples):
 
@@ -202,7 +314,12 @@ The Diebold-Mariano test was checked by Monte Carlo (`tests/test_evaluate.py`): 
 5 % level 5.5–7 % of the time, i.e. it is mildly liberal. The headline CV tests have p-values far below that margin;
 borderline holdout results (p = 0.07–0.1) should be read with that in mind.
 
-### Other inputs: interconnector capacity and plant outages (`src/outages.py`, `src/outage_experiment.py`)
+</details>
+
+<details>
+<summary><b>Interconnector capacity and plant outages</b> (why neither is a feature)</summary>
+
+Code: `src/outages.py`, `src/outage_experiment.py`.
 
 * **Day-ahead interconnector capacities (NTC)** for RO ↔ BG and GR ↔ BG are published before the auction and are complete
   (6 features, `capacity` group). They are informative in isolation (the average |BG − RO| gap is €5.3 when import capacity is in its
@@ -222,7 +339,10 @@ borderline holdout results (p = 0.07–0.1) should be read with that in mind.
   `reports/retest_status.json`, shows the result on the About page, and re-runs the outage experiment automatically the day either
   precondition is met.
 
-### Weather uncertainty (notebook 04b)
+</details>
+
+<details>
+<summary><b>Weather uncertainty</b> (notebook 04b)</summary>
 
 | Setup (same LightGBM, 2024-07 to 2026-10) | Price MAE |
 |---|---|
@@ -239,6 +359,8 @@ this:
 2. The residual-load forecast miss has no relationship with the day-ahead price error. That is market logic:
    the day-ahead price clears on D-1 forecasts, so realised misses move intraday and imbalance prices instead.
    Weather risk is therefore an intraday and balancing exposure.
+
+</details>
 
 ### Battery value (notebook 05)
 
@@ -283,31 +405,49 @@ EUR 82k per MW-year, P5-P95 EUR 74k-91k. Daily loss probability is conservative 
 
 See `MODEL_CARD.md` for intended use, evaluation summary and known failure modes.
 
-## Quick start
 
-```bash
-python -m venv .venv && .venv\Scripts\activate        # Windows (source .venv/bin/activate on Linux/macOS)
-pip install -r requirements.txt
-copy .env.example .env                                  # then add ENTSOE_API_KEY (and optionally OILPRICE_API_KEY for daily TTF)
-python -m src.tune --trials 50                          # optional: Optuna (time-based CV, holdout untouched)
-python -m src.run_all --plus                            # ingest -> clean -> features -> models -> reports
-python -m src.build_notebooks                           # regenerate and execute notebooks/
-python -m src.calibrate                                 # conformal recalibration of the 10-90 % band
-python -m src.robust_experiment                         # regime-robust variants, bootstrap intervals, level-shift episodes
-python -m src.battery_study                             # degradation, confidence filter, reserve stacking
-python -m src.montecarlo                                # Monte Carlo battery-revenue scenarios + calibration back-test
-python -m src.outage_experiment                         # optional: value of (leaky) outage knowledge, CV only
-python -m src.retest_optional [--groups]                # are outages testable yet? (revision probe + snapshot count); --groups re-runs capacity/fuels
-python -m src.fuel_experiment                           # optional: do fuel/carbon features help? (CV only)
-python -m pytest tests                                  # leakage tests (features, fuels) and track-record rules
-python -m src.predict_next_day                          # reports/forecast_next_day.csv
-streamlit run app/dashboard.py                          # dashboard (reads reports/ only, never the API)
-mlflow ui --backend-store-uri sqlite:///mlflow.db       # experiment tracking
+## Dashboard details
+
+**Navigation and home.** One fixed header carries the brand, five primary page links (current page highlighted), an **All pages**
+menu that lists every page (two columns, always reachable even on a phone, where the header shows the current page and the menu) and a
+*Settings* menu (theme, language, data status, sign-out). Theme and language are kept in plain session keys, so they survive page switches.
+The default page is **Home**: what the project is, three numbers computed from the reports, a card for every page, how it works, and what
+makes it honest.
+
+**Design and accessibility** (`app/theme.py`, `app/style.css`): one design system for all pages. Chart colours are a fixed-order
+categorical palette checked with a colour-blind (CVD) separation and contrast validator; emphasis is one accent against neutral
+marks, thin marks, direct labels plus a legend, and no dual axes. Page titles and chart titles that state a finding are computed
+from the data, not typed in. Filters sit in one bar above the content they scope. Every chart has a *Table view* with CSV download and
+a screen-reader description; text meets WCAG AA contrast, focus is visible, touch targets are 44 px on small screens, motion stops when the
+browser asks for reduced motion, and the layout reflows down to phone width. The headless smoke test renders every page.
+
+**Light and dark theme, English and Bulgarian.** *Settings* switches both; they are also in the URL (`?theme=light&lang=bg`), so a link opens
+exactly that view, and the browser language picks Bulgarian by default. Dark and light are two separately selected palettes (the light one was
+run through the same CVD and contrast validator), not an automatic flip, and colours are resolved per session so two visitors on different
+themes never share state. The Bulgarian text lives in `app/i18n_bg.py`, keyed by the English source with computed numbers as placeholders;
+anything without a translation falls back to English, and a test fails if a default page render contains untranslated sentences.
+
+**Interactive extras.** The Overview opens with *Tomorrow around the clock*: the next-day forecast as a 24-hour dial and an hour ribbon
+(every cell carries its number and a marker, never colour alone), with *Ask the market*, five plain questions whose answers are computed
+from the forecast and light up the dial and ribbon. A month-by-month animation shows the solar dip deepening and fading. *Beat the Model*
+is a small game: schedule a 1 MW / 2 MWh battery for a past day, then see it settled against LightGBM, the naive forecaster and perfect
+foresight; the scoreboard warns that a handful of rounds proves nothing.
+
+### Sign-in
+
+On by default and **fail-closed** (`app/auth.py`): until credentials exist in Secrets (or `EMA_AUTH_*` variables) nobody can sign in, so a
+forgotten secret never leaves a hosted copy open. Create a hash with `python -m src.make_password_hash` and put it in
+`.streamlit/secrets.toml` (Streamlit Community Cloud: *App settings, Secrets*):
+
+```toml
+[auth]
+users = { alice = "pbkdf2_sha256$...", bob = "pbkdf2_sha256$..." }   # or: password = "pbkdf2_sha256$..." for one shared password
 ```
 
-Downloads are cached month by month in `data/raw/` as Parquet, so re-running never downloads a chunk
-twice. Only the current, incomplete month is refreshed. A full download from scratch takes about 15
-minutes. `run_all --plus` takes about 45 minutes on a laptop CPU.
+Passwords are checked as salted PBKDF2-SHA256 hashes (240,000 iterations) with a constant-time comparison; failed attempts are slowed down and
+locked for 60 s after five. This keeps casual visitors out. It does **not** hide files that are in a public repository, so keep the
+repository private (and use the host's own viewer allow-list) if the data matters. `.streamlit/secrets.toml` is git-ignored.
+
 
 ## Data
 
@@ -396,60 +536,13 @@ src/
   predict_next_day.py  next delivery-day forecast file
   build_notebooks.py   generates and executes notebooks/
   run_all.py           one command end to end
-app/                   Streamlit dashboard: dashboard.py (router), overview.py, home.py, views/ (9 pages), auth.py (optional sign-in), theme.py (dark/light palettes), i18n.py + i18n_bg.py (English/Bulgarian), signature.py (market clock, ribbon, Ask the market)
+app/                   Streamlit dashboard: dashboard.py (router), home.py, overview.py, views/ (9 pages), auth.py (sign-in), theme.py (header, palettes), style.css + style_light.css, i18n.py + i18n_bg.py (English/Bulgarian), signature.py (market clock, ribbon, Ask the market)
 notebooks/             01 data quality · 02 insights · 03 forecasting · 04 ML deep dive · 04b weather · 05 battery
 reports/               all results the dashboard reads (CSV / Parquet / figures)
 tests/                 leakage, evaluation maths, walk-forward, battery, Monte Carlo, validation, translation and palette checks, dashboard smoke (every page in English/dark and Bulgarian/light)
 .github/workflows/     ci.yml (tests on every push) and next_day_forecast.yml (daily forecast, stretch)
 Makefile, Dockerfile   one-command targets; dashboard-only container
 ```
-
-## Dashboard
-
-`streamlit run app/dashboard.py` opens these pages: Market Overview (KPIs, price chart, calendar), **Trader Brief** (tomorrow's
-forecast turned into rule-based actions, how far to trust it, and a playbook; every number computed from the project's files),
-Price Drivers (including fuel and carbon), Cross-Border, Forecast (back-test with calibrated band, next-day card, error heatmap,
-live track record), Weather Uncertainty, Model Lab (leaderboard with significance and bootstrap intervals, regime robustness,
-SHAP, calibration, classifiers, drift), Battery Simulation (sliders, costs, investment view, reserve capacity) and About.
-It reads only precomputed files in `reports/`.
-
-**Design and accessibility** (`app/theme.py`, `app/style.css`): one design system for all pages. Chart colours are a fixed-order
-categorical palette checked with a colour-blind (CVD) separation and contrast validator; emphasis is one accent against neutral
-marks, thin marks, direct labels plus a legend, and no dual axes. Page titles and chart titles that state a finding are computed
-from the data, not typed in. Filters sit in one bar above the content they scope. Every chart has a *Table view* with CSV download and
-a screen-reader description; text meets WCAG AA contrast, focus is visible, touch targets are 44 px on small screens, and the layout
-reflows down to phone width. The headless smoke test renders every page.
-**Navigation and home.** One fixed header carries the brand, a single row of page links (current page highlighted; scrollable on phones, with the current page first) and a *Settings* menu (theme, language, data status, sign-out). Theme and language are kept in plain session keys, so they survive page switches; `EMA_AUTH_DISABLED=1` switches the sign-in off for local development only. The default page is **Home**: what the project is, three numbers computed from the
-reports, a card for every page, how it works, and what makes it honest, with the same limits stated as on the other pages.
-
-**Sign-in** (`app/auth.py`). On by default and fail-closed: until credentials exist in Secrets (or `EMA_AUTH_*` variables) nobody can sign in, so a forgotten secret never leaves a hosted copy open. For local work set `EMA_AUTH_DISABLED=1` (never online). To protect a deployed
-app, create a hash with `python -m src.make_password_hash` and put it in `.streamlit/secrets.toml` (Community Cloud: App settings, Secrets):
-
-```toml
-[auth]
-users = { alice = "pbkdf2_sha256$...", bob = "pbkdf2_sha256$..." }   # or: password = "pbkdf2_sha256$..." for one shared password
-```
-
-Passwords are checked as salted PBKDF2 hashes with a constant-time comparison, failed attempts are slowed down and locked for 60 s after
-five. This keeps casual visitors out; it does not hide files that are in a public repository, so keep the repository private and also
-use the host's own viewer allow-list if the data matters. `.streamlit/secrets.toml` is git-ignored.
-
-**Light and dark theme, English and Bulgarian.** The sidebar switches theme and language; both are in the URL (`?theme=light&lang=bg`),
-so a link opens exactly that view, and the browser language picks Bulgarian by default. Dark and light are two separately selected
-palettes (the light one was run through the same CVD and contrast validator), not an automatic flip, and colours are resolved per
-session so two visitors on different themes never share state. The Bulgarian text lives in `app/i18n_bg.py`, keyed by the English
-source with computed numbers as placeholders; anything without a translation falls back to English, and a test fails if a default page
-render contains untranslated sentences. Hover text, dates and month names are localised; Plotly's own axis tick formats stay English.
-
-**Interactive extras.** The Overview opens with *Tomorrow around the clock*: the next-day forecast as a 24-hour dial and an hour
-ribbon (every cell carries its number and a marker, never colour alone), with *Ask the market*, five plain questions whose answers are
-computed from the forecast and light up the dial and ribbon (cheapest window, window to avoid, spike risk, what a battery would earn,
-can I trust it). A month-by-month animation shows the solar dip deepening and fading. *Beat the Model* is a small game: schedule a
-1 MW / 2 MWh battery for a past day, then see it settled against LightGBM, the naive forecaster and perfect foresight; the scoreboard
-compares like for like over the days you played and warns that a handful of rounds proves nothing.
-
-Navigation aids: a sticky *On this page* bar on the long pages (a single scrollable row on phones), a *Tomorrow* strip on the overview linking to the
-Trader Brief, and *Where next* links at the foot of every page.
 
 ## Live track record and tests
 
@@ -458,7 +551,7 @@ Trader Brief, and *Where next* links at the foot of every page.
   gate closure (12:00 CET on D-1), and the first live forecast of an hour is never overwritten. Live forecasts are
   scored against the published day-ahead price and the naive baseline in `reports/live_track_record.csv`, shown on the
   Forecast page. The daily GitHub Action publishes both files, so this fills in from the first scheduled run.
-* **Tests** (`python -m pytest tests`, 54 tests, also verified in a brand-new environment built from `requirements.txt`):
+* **Tests** (`python -m pytest tests`, 91 tests, also verified in a brand-new environment built from `requirements.txt`):
   the whole feature builder is checked for leakage (changing any price on the delivery day or later, or any flow from D-1 on,
   must leave every feature of that day unchanged, plus a sanity test that yesterday's prices *do* change the lag features), the
   fuel and outage features are checked the same way, the evaluation maths (Diebold-Mariano size by Monte Carlo, pinball loss,
@@ -505,3 +598,15 @@ earlier years.
   (below) will show how they behave out of sample.
 * The battery base case is day-ahead arbitrage, price-taker, without network charges, taxes or intraday revenue. Degradation is a
   configurable cost; reserve capacity revenue is indicative only (administered prices, tiny markets).
+
+
+## Contributing and feedback
+
+Issues and pull requests are welcome. Before opening a PR, run `python -m pytest tests` (the dashboard smoke test renders every page in
+English/dark and Bulgarian/light). For a change that touches modelling, say what the pre-set adoption rule is and what the CV months show.
+
+## License and acknowledgements
+
+Code is released under the [MIT License](LICENSE). Market data comes from the [ENTSO-E Transparency Platform](https://transparency.entsoe.eu/)
+and [Open-Meteo](https://open-meteo.com/); fuel context from the World Bank Pink Sheet, OilPriceAPI and Yahoo Finance. Check each provider's
+terms before republishing raw data. This is research and education, **not trading or investment advice**.
