@@ -48,3 +48,12 @@ code { background: var(--surface-2); color: var(--text); }
 /* polish v5 in light: soft warm shadows instead of dark ones */
 :root { --shadow-1: 0 1px 2px rgba(60,40,10,.06), 0 8px 22px rgba(60,40,10,.06); --shadow-2: 0 2px 4px rgba(60,40,10,.08), 0 16px 36px rgba(60,40,10,.10); }
 .rb-cell { box-shadow: none; }
+
+/* tabs (Streamlit >= 1.5x renders [data-testid=stTab], not <button>): readable labels and a light scroll fade */
+[data-testid="stTab"], [data-testid="stTab"] p { color: var(--text-2) !important; }
+[data-testid="stTab"]:hover, [data-testid="stTab"]:hover p { color: var(--text) !important; }
+[data-testid="stTab"][aria-selected="true"], [data-testid="stTab"][aria-selected="true"] p { color: var(--accent-ui) !important; font-weight: 700; }
+[data-testid="stTabs"] [data-testid="stTabsScrollRight"] { background-image: linear-gradient(to right, rgba(253,252,250,0), #FDFCFA 60%) !important; color: var(--text-2); }
+[data-testid="stTabs"] [data-testid="stTabsScrollLeft"] { background-image: linear-gradient(to left, rgba(253,252,250,0), #FDFCFA 60%) !important; color: var(--text-2); }
+[data-testid="stTabs"] [data-testid="stTabsScrollRight"], [data-testid="stTabs"] [data-testid="stTabsScrollLeft"], [data-testid="stTabs"] [data-testid="stTabsScrollRight"] *, [data-testid="stTabs"] [data-testid="stTabsScrollLeft"] * { background-color: transparent !important; box-shadow: none !important; }
+[data-testid="stTabs"] [data-testid="stTabsScrollRight"] svg, [data-testid="stTabs"] [data-testid="stTabsScrollLeft"] svg { fill: var(--text-2) !important; color: var(--text-2) !important; }

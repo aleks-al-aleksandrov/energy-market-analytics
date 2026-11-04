@@ -356,7 +356,10 @@ def chrome(active: str = "") -> None:
         with st.container(key="topnav"):
             for i, (path, label, icon, page_title) in enumerate(NAV):
                 if page_title in PRIMARY or page_title == active:
-                    with st.container(key=f"nav_{i}{'_current' if page_title == active else ''}"):
+                    suffix = ""
+                    if page_title == active:
+                        suffix = "_current" if page_title in PRIMARY else "_current_xtra"      # xtra: a secondary page's own link, hidden when space is tight
+                    with st.container(key=f"nav_{i}{suffix}"):
                         link(path, label, icon=icon, width="content")
             with st.container(key=f"allpages{'_current' if active and active not in PRIMARY else ''}"):
                 with st.popover(tr("All pages"), icon=":material/apps:"):

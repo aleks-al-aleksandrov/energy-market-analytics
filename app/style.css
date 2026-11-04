@@ -572,3 +572,19 @@ body { font-feature-settings: "cv11", "ss01", "tnum" 0; }
 [data-testid="stTabs"] [data-baseweb="tab-highlight"] { background: var(--accent-ui) !important; height: 3px; border-radius: 3px; }
 @media (prefers-reduced-motion: reduce) { .kpi:hover, .stButton button:hover { transform: none; } }
 .rb-p { font-size: .9rem; letter-spacing: -.03em; } @media (max-width: 1420px) { .rb-p { font-size: 1.02rem; } .rb-cell { min-height: 74px; } }
+
+/* header never collides: tighten step by step as the window narrows */
+@media (min-width: 861px) and (max-width: 1320px) { .st-key-topnav > :has([class*="_xtra"]) { display: none; } }
+@media (max-width: 1180px) {
+  .st-key-topnav [data-testid="stPageLink"] a { padding: 6px 9px; gap: 0; }
+  .st-key-topnav [data-testid="stPageLink"] a [data-testid="stIconMaterial"], .st-key-topnav [data-testid="stPageLink"] a span[class*="Icon"] { display: none; }
+  .st-key-topbar .brand-text { display: none; }
+}
+@media (max-width: 560px) {
+  .st-key-topbar > [data-testid="stLayoutWrapper"]:has(.st-key-topnav) { overflow: hidden; min-width: 0; }
+  .st-key-topnav { min-width: 0; max-width: 100%; }
+  .st-key-topnav > :not(:has([class*="st-key-allpages"])) { flex: 0 1 auto; min-width: 0; }
+  .st-key-topnav > :has([class*="st-key-allpages"]) { flex: none; }
+  .st-key-topnav [class*="st-key-nav_"], .st-key-topnav [class*="st-key-nav_"] [data-testid="stPageLink"], .st-key-topnav [class*="st-key-nav_"] a { min-width: 0; max-width: 100%; }
+  .st-key-topnav [class*="st-key-nav_"] a p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
