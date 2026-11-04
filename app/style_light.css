@@ -44,3 +44,7 @@ code { background: var(--surface-2); color: var(--text); }
 [data-testid="stDateInputField"] *, [data-testid="stTextInputRootElement"] *, [data-testid="stNumberInputContainer"] *, [data-baseweb="select"] *,
 [data-testid="stButtonGroup"] *, [data-baseweb="popover"] > div * { color: #E8EBF0 !important; }
 [data-testid="stButtonGroup"] button[aria-checked="true"] *, [data-testid="stButtonGroup"] button[aria-pressed="true"] * { color: #F5A524 !important; }
+
+/* polish v5 in light: soft warm shadows instead of dark ones */
+:root { --shadow-1: 0 1px 2px rgba(60,40,10,.06), 0 8px 22px rgba(60,40,10,.06); --shadow-2: 0 2px 4px rgba(60,40,10,.08), 0 16px 36px rgba(60,40,10,.10); }
+.rb-cell { box-shadow: none; }

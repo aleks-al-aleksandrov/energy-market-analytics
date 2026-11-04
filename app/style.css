@@ -521,3 +521,54 @@ header[data-testid="stHeader"] { background: transparent !important; border: 0 !
   .st-key-topnav [data-testid="stPageLink"] a, [class*="st-key-allpages"] button, .st-key-settings button { min-height: 44px; }
 }
 @media (max-width: 560px) { [class*="st-key-allpages"] button [data-testid="stMarkdownContainer"] { display: none; } [class*="st-key-allpages"] button { padding: 6px 10px; } }
+
+/* ============================== polish v5: type, depth, motion, small details ============================== */
+:root { --ease: cubic-bezier(.2,.7,.2,1); --shadow-1: 0 1px 0 rgba(255,255,255,.035) inset, 0 8px 24px rgba(0,0,0,.22); --shadow-2: 0 1px 0 rgba(255,255,255,.05) inset, 0 16px 40px rgba(0,0,0,.30); }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body { font-feature-settings: "cv11", "ss01", "tnum" 0; }
+::selection { background: rgba(var(--accent-rgb), .32); color: var(--text); }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+/* a quicker, lighter page entrance (content is never dim for long) */
+@keyframes page-in { from { opacity: .35; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.block-container > [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"]:nth-child(-n+8) { animation: page-in .32s var(--ease) both; }
+
+/* type scale: confident titles, quiet labels, aligned numbers */
+.page-head h1 { font-size: clamp(1.9rem, 3.4vw, 2.6rem); letter-spacing: -.035em; line-height: 1.08; }
+.page-head .eyebrow, .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; }
+.page-head .eyebrow::before, .hero-eyebrow::before { content: ""; width: 18px; height: 2px; border-radius: 2px; background: var(--accent-ui); }
+.page-head .lede { font-size: 1.04rem; color: var(--text-2); }
+.block-container h2 { font-size: 1.45rem; font-weight: 750; letter-spacing: -.025em; margin-top: 2.2rem; }
+.block-container h3 { font-size: 1.12rem; font-weight: 700; letter-spacing: -.015em; }
+.block-container h2::before { content: ""; display: inline-block; width: 4px; height: .95em; margin-right: 10px; border-radius: 3px; background: linear-gradient(180deg, var(--accent-ui), rgba(var(--accent-rgb), .35)); vertical-align: -.08em; }
+.kpi .value, .tbl td.num, .hn b, .rb-p { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+/* depth: cards, KPI tiles and the headline sit on a soft edge-lit surface and respond to the pointer */
+[class*="st-key-card_"], .kpi, .takeaway, .tbl-wrap { box-shadow: var(--shadow-1); transition: transform .22s var(--ease), border-color .22s, box-shadow .22s; }
+[class*="st-key-card_"]:hover, .kpi:hover { border-color: rgba(var(--accent-rgb), .38); box-shadow: var(--shadow-2); }
+.kpi:hover { transform: translateY(-3px); }
+.headline { box-shadow: var(--shadow-1); }
+.hero { box-shadow: var(--shadow-2); }
+.kpi .value { background: linear-gradient(180deg, var(--text), color-mix(in srgb, var(--text) 78%, var(--accent-ui))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.kpi.accent .value { background: linear-gradient(180deg, var(--text), var(--accent-ui)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+
+/* controls feel tactile */
+.stButton button, [data-testid="stDownloadButton"] button { transition: transform .15s var(--ease), border-color .15s, background .15s, box-shadow .15s; }
+.stButton button:hover, [data-testid="stDownloadButton"] button:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.stButton button:active, [data-testid="stDownloadButton"] button:active { transform: translateY(0) scale(.99); }
+[data-testid="stBaseButton-primary"] { background: linear-gradient(180deg, #F7B23B, #E99410) !important; color: #1A1203 !important; border: 0 !important; font-weight: 700; box-shadow: 0 6px 18px rgba(245,165,36,.28); }
+[data-testid="stBaseButton-primary"]:hover { box-shadow: 0 10px 26px rgba(245,165,36,.38); }
+[data-testid="stPills"] button, [data-testid="stButtonGroup"] button { transition: background .15s, border-color .15s, color .15s; }
+
+/* the hour ribbon: room to read on laptops, two tidy rows when narrow */
+@media (max-width: 1420px) { .ribbon ol { grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; } .rb-day { display: none; } .rb-cell { padding: 8px 2px 7px; } }
+.rb-h { letter-spacing: .02em; }
+.rb-cell { border-radius: 11px; box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+
+/* charts breathe inside a framed surface */
+[data-testid="stPlotlyChart"] { border-radius: var(--radius); }
+[data-testid="stExpander"] details { border-radius: var(--radius); transition: border-color .2s; }
+[data-testid="stExpander"] details:hover { border-color: rgba(var(--accent-rgb), .35); }
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { background: var(--accent-ui) !important; height: 3px; border-radius: 3px; }
+@media (prefers-reduced-motion: reduce) { .kpi:hover, .stButton button:hover { transform: none; } }
+.rb-p { font-size: .9rem; letter-spacing: -.03em; } @media (max-width: 1420px) { .rb-p { font-size: 1.02rem; } .rb-cell { min-height: 74px; } }
