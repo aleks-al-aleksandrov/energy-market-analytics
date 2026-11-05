@@ -106,6 +106,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-ingest", action="store_true")
     ap.add_argument("--plus", action="store_true", help="also run ML-Plus stage")
+    ap.add_argument("--ingest-only", action="store_true", help="download and cache the raw data, then stop (CI cold start)")
     a = ap.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -115,6 +116,9 @@ def main() -> None:
         ingest_entsoe(C.START, end)
         ingest_weather(C.START, end)
         ingest_fuels()
+    if a.ingest_only:
+        log.info("raw data cached in %s", C.DATA_RAW)
+        return
 
     from src.clean import build_hourly
     hourly, quality, res = build_hourly()

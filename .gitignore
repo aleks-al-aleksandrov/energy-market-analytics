@@ -19,3 +19,7 @@ __pycache__/
 # local tooling
 .vscode/
 .idea/
+
+# personal interview preparation (never commit)
+interview_prep/
+INTERVIEW_CONTEXT.md

@@ -20,7 +20,7 @@ permissions:
 jobs:
   forecast:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360          # a cold start (download + full retrain) needs hours on a hosted runner; later runs take minutes
     env:
       ENTSOE_API_KEY: ${{ secrets.ENTSOE_API_KEY }}
       OILPRICE_API_KEY: ${{ secrets.OILPRICE_API_KEY }}   # optional: daily TTF history keeps growing
@@ -33,17 +33,37 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
-      - name: Restore data and models
-        uses: actions/cache@v4
+      # Two separate caches, each saved right after its stage, so a timeout in the long retrain never loses the download.
+      - name: Restore raw data
+        uses: actions/cache/restore@v4
         with:
-          path: |
-            data/raw
-            models
-          key: ema-${{ github.run_id }}
-          restore-keys: ema-
+          path: data/raw
+          key: ema-data-${{ github.run_id }}
+          restore-keys: ema-data-
+      - name: Restore models
+        uses: actions/cache/restore@v4
+        with:
+          path: models
+          key: ema-models-${{ github.run_id }}
+          restore-keys: ema-models-
+      - name: Download data (monthly Parquet cache; only new months are fetched)
+        run: python -m src.run_all --ingest-only
+      - name: Save raw data cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/raw
+          key: ema-data-${{ github.run_id }}
       - name: Retrain (weekly, on demand, or when no model exists)
+        id: retrain
         if: github.event.schedule == '0 3 * * 1' || inputs.retrain || hashFiles('models/final_models.joblib') == ''
-        run: python -m src.run_all --plus
+        run: python -m src.run_all --skip-ingest --plus
+      - name: Save models cache
+        if: steps.retrain.conclusion == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: models
+          key: ema-models-${{ github.run_id }}
       - name: Forecast next delivery day
         run: python -m src.predict_next_day
       - name: Monte Carlo revenue range for the new forecast
