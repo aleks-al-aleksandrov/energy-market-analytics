@@ -1,5 +1,5 @@
 {
-  "checked_utc": "2026-11-03T16:27:00+00:00",
+  "checked_utc": "2026-11-09T04:19:00+00:00",
   "revision_probe": {
     "probed": true,
     "month": "2026-04",
@@ -7,13 +7,8 @@
     "documents_with_multiple_revisions": 0,
     "max_revisions_per_document": 1
   },
-  "pit_days": 1,
+  "pit_days": 6,
   "pit_days_needed": 180,
   "outages_testable": false,
-  "outage_note": "Not testable yet: the API returns one revision per document (0 documents with several) and only 1 of 180 point-in-time snapshot days exist. Snapshots are collected daily by the forecast workflow.",
-  "optional_groups_adopted": {
-    "capacity": false,
-    "fuels": false
-  },
-  "optional_groups_file": "reports/feature_choice.json"
+  "outage_note": "Not testable yet: the API returns one revision per document (0 documents with several) and only 6 of 180 point-in-time snapshot days exist. Snapshots are collected daily by the forecast workflow."
 }
