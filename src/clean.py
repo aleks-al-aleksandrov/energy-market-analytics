@@ -78,6 +78,22 @@ def build_hourly(end: pd.Timestamp | None = None) -> tuple[pd.DataFrame, pd.Data
         wind_cols = [c for c in ws.columns if "wind" in c.lower()]
         out["wind_forecast"] = ws[wind_cols].sum(axis=1, min_count=1) if wind_cols else np.nan
 
+    # --- regional drivers: German price, neighbours' day-ahead load / wind / solar forecasts -----------------
+    for z in C.REGION_PRICE_ZONES:
+        raw = load_raw(f"prices/{z}")
+        if not raw.empty:
+            out[f"price_{z}"] = raw.iloc[:, 0].resample("1h").mean()
+    for z in C.REGION_FORECAST_ZONES:
+        lfz = load_raw(f"load_forecast/{z}")
+        wsz = _hourly(load_raw(f"wind_solar_forecast/{z}"))
+        if lfz.empty:
+            continue
+        out[f"reg_load_fc_{z}"] = _hourly(lfz).iloc[:, 0]
+        res = wsz.sum(axis=1, min_count=1) if not wsz.empty else np.nan
+        out[f"reg_res_fc_{z}"] = out[f"reg_load_fc_{z}"] - (res.reindex(out.index).fillna(0) if not wsz.empty else 0)
+        if not wsz.empty:
+            out[f"reg_ren_share_{z}"] = (res.reindex(out.index) / out[f"reg_load_fc_{z}"]).clip(0, 3)
+
     # --- actual generation per type (analysis only, NOT a feature) ------------
     gen = _hourly(load_raw(f"generation/{bg}"))
     if not gen.empty:

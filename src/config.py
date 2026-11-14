@@ -32,6 +32,10 @@ NEIGHBOUR_ZONES = ["RO", "GR", "HU"]
 PRICE_ZONES = [FOCUS_ZONE] + NEIGHBOUR_ZONES
 # Physical cross-border flows BG <-> neighbours (ENTSO-E country codes)
 FLOW_NEIGHBOURS = ["RO", "GR", "RS", "MK", "TR"]
+# Regional drivers (optional feature group "regional"): Germany sets the continental price level; the neighbours' own
+# day-ahead load / wind / solar forecasts say how tight the coupled region will be. All are published before gate closure.
+REGION_PRICE_ZONES = ["DE_LU"]
+REGION_FORECAST_ZONES = ["RO", "GR", "HU", "DE_LU"]
 
 # --- Weather points (Open-Meteo) --------------------------------------------
 WEATHER_POINTS = {

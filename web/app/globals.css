@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+/* Design tokens. The chart colours are the palettes already validated for colour-blind separation and contrast in the
+   Streamlit app (app/theme.py); dark and light are two selected palettes, not an automatic flip. */
+:root, :root[data-theme="dark"] {
+  --bg: #0B0E14; --surface: #121722; --surface-2: #181F2C; --border: #222B3A; --grid: #1F2735;
+  --text: #E8EBF0; --text-2: #A4ACBA; --muted: #8A93A6;
+  --accent: #F5A524; --accent-ink: #1A1203; --series: #c98500; --series-soft: rgba(245,165,36,.16);
+  --blue: #3987e5; --magenta: #d55181; --green: #008300; --violet: #9085e9; --red: #e66767; --neutral: #5A6476;
+  --good: #0ca30c; --warn: #fab219; --crit: #d03b3b;
+  --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 12px 32px rgba(0,0,0,.28);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #F3F1EB; --surface: #FDFCFA; --surface-2: #F0EDE6; --border: #D9D4C8; --grid: #E4E0D6;
+  --text: #14161A; --text-2: #474B54; --muted: #666B76;
+  --accent: #A64A06; --accent-ink: #FFFFFF; --series: #eda100; --series-soft: rgba(237,161,0,.20);
+  --blue: #2a78d6; --magenta: #e87ba4; --green: #008300; --violet: #6250d6; --red: #e34948; --neutral: #7B8190;
+  --good: #0a8a0a; --warn: #b97a00; --crit: #c03030;
+  --shadow: 0 1px 2px rgba(60,40,10,.06), 0 10px 26px rgba(60,40,10,.08);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg); --color-surface: var(--surface); --color-surface-2: var(--surface-2); --color-border: var(--border);
+  --color-text: var(--text); --color-text-2: var(--text-2); --color-muted: var(--muted);
+  --color-accent: var(--accent); --color-accent-ink: var(--accent-ink);
+  --color-good: var(--good); --color-warn: var(--warn); --color-crit: var(--crit);
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body {
+  background:
+    radial-gradient(1100px 480px at 88% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    radial-gradient(900px 420px at -8% 4%, color-mix(in srgb, var(--blue) 7%, transparent), transparent 60%),
+    var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+}
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); }
+.card-pad { padding: 20px; }
+@media (min-width: 640px) { .card-pad { padding: 24px; } }
+.eyebrow { color: var(--accent); font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-2); font-size: .8rem; white-space: nowrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 600; cursor: pointer;
+  transition: transform .15s, border-color .15s, background .15s; }
+.btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+.btn:active { transform: none; }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.pill { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--text-2);
+  font-weight: 600; font-size: .9rem; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+.pill:hover { color: var(--text); border-color: var(--accent); }
+.pill[aria-pressed="true"], .pill[aria-current="page"] { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: var(--accent); color: var(--text); }
+.fade-in { animation: fade-in .35s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+input[type="range"] { accent-color: var(--accent); width: 100%; height: 28px; }
+table.data { width: 100%; border-collapse: collapse; font-size: .9rem; }
+table.data th { text-align: left; color: var(--muted); font-weight: 600; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase;
+  padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.data td { padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+table.data td.n, table.data th.n { text-align: right; font-variant-numeric: tabular-nums; }
+table.data tbody tr:hover td { background: var(--surface-2); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

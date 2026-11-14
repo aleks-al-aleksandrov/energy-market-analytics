@@ -1,0 +1,18 @@
+{
+  "point_forecast": "ada4",
+  "baseline": "lgbm_monthly",
+  "rule": "CV MAE at least 0.1 lower and Diebold-Mariano p < 0.05 on the CV months; lowest CV MAE among those that pass",
+  "candidates_passing": [
+    "lgbm_weekly",
+    "lgbm_asinh",
+    "lgbm_asinh_weekly",
+    "lear_weekly",
+    "ada3",
+    "ada4"
+  ],
+  "band": "aci gamma=0.05",
+  "band_rule": "ACI variant with CV coverage within 1 point of 80 % and the best worst-30-day CV coverage, if better than production",
+  "holdout_note": "Aug-Oct 2026 is reported only: it has been inspected before and is not an untouched test any more.",
+  "cv_months": "2024-07..2026-07",
+  "holdout_months": "2026-08..2026-10"
+}

@@ -1,4 +1,4 @@
-# Continuous integration: tests (leakage, track record) and a headless smoke test of every dashboard page.
+# Continuous integration: Python tests, a headless smoke test of every Streamlit page, and lint + build of the web app.
 name: ci
 
 on:
@@ -22,8 +22,28 @@ jobs:
       - name: Install light dependencies
         run: |
           pip install -r app/requirements.txt
-          pip install holidays python-dotenv requests scikit-learn lightgbm pytest
+          pip install holidays python-dotenv requests scikit-learn lightgbm pytest fastapi httpx
       - name: Unit tests (no-leakage, fuels, live track record, battery, data checks)
         run: python -m pytest tests --ignore=tests/test_dashboard_smoke.py -q
       - name: Dashboard smoke test (every page runs against the committed reports/)
         run: python -m pytest tests/test_dashboard_smoke.py -q
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Every interface string has a Bulgarian entry
+        run: python3 scripts/check_i18n.py . check
+      - run: npm ci
+      - run: npx eslint .
+      - name: Build (type-checks every page against the committed JSON payloads)
+        run: npx next build

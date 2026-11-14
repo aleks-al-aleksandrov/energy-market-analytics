@@ -143,6 +143,25 @@ def build_features(h: pd.DataFrame) -> pd.DataFrame:
         ntc += ["ntc_import_total", "ntc_export_total"]
     groups["capacity"] = ntc
 
+    # --- regional drivers (optional group): German price of D-1, neighbours' day-ahead forecasts for D --------
+    cols = []
+    for z in getattr(C, "REGION_PRICE_ZONES", []):
+        c = f"price_{z}"
+        if c in h:
+            f[f"{c}_lag24"] = _safe_lag(h[c], 24, day_start)
+            f[f"{c}_d1_mean"] = _daily_stat_prev(h[c], dday, 1, "mean")
+            f[f"spread_BG_{z}_lag24"] = f["price_lag24"] - f[f"{c}_lag24"]
+            cols += [f"{c}_lag24", f"{c}_d1_mean", f"spread_BG_{z}_lag24"]
+    reg = [c for c in h.columns if c.startswith(("reg_res_fc_", "reg_ren_share_"))]
+    for c in reg:
+        f[c] = h[c]
+    cols += reg
+    res_cols = [c for c in reg if c.startswith("reg_res_fc_") and not c.endswith("DE_LU")]
+    if res_cols and "residual_load_forecast" in f:
+        f["reg_res_fc_see"] = f[res_cols].sum(axis=1, min_count=len(res_cols)) + f["residual_load_forecast"]
+        cols.append("reg_res_fc_see")
+    groups["regional"] = cols
+
     # --- flows (full days up to D-2) -------------------------------------------
     cols = []
     if "net_import" in h:
@@ -170,7 +189,10 @@ def build_features(h: pd.DataFrame) -> pd.DataFrame:
     return f
 
 
-OPTIONAL_GROUPS = ["capacity", "fuels"]     # groups that must earn their place on the CV months (see run_all)
+OPTIONAL_GROUPS = ["capacity", "fuels"]
+# Groups that are built and tested but held out of production whatever the automatic rule says. "regional" lowered CV error
+# (src/regional_experiment.py) yet made LightGBM far worse in the Aug-Oct 2026 price surge, so a person decides, not the rule.
+HELD_GROUPS = ["regional"]     # groups that must earn their place on the CV months (see run_all)
 
 
 def default_excluded_groups() -> list[str]:
@@ -179,13 +201,13 @@ def default_excluded_groups() -> list[str]:
     if not p.exists():
         return []
     choice = json.loads(p.read_text())
-    return [g for g in OPTIONAL_GROUPS if not choice.get(f"use_{g}", True)]
+    return [g for g in OPTIONAL_GROUPS if not choice.get(f"use_{g}", False)]      # a group never tested is not adopted
 
 
 def feature_columns(groups: list[str] | None = None, exclude: list[str] | None = None,
-                    respect_choice: bool = True) -> list[str]:
+                    respect_choice: bool = True, include_held: bool = False) -> list[str]:
     groups = groups or list(FEATURE_GROUPS)
-    exclude = (exclude or []) + (default_excluded_groups() if respect_choice else [])
+    exclude = (exclude or []) + (default_excluded_groups() if respect_choice else []) + ([] if include_held else HELD_GROUPS)
     return [c for g in groups if g not in exclude for c in FEATURE_GROUPS[g]]
 
 

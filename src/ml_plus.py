@@ -242,6 +242,12 @@ def main(f: pd.DataFrame, p: pd.DataFrame) -> None:
     thr_spike = float(f.loc[allv, TARGET].quantile(C.SPIKE_QUANTILE))          # fixed-EUR level, kept for reference
     final["spike"], thr_excess = fit_spike_model(f, feats)
     final["level"] = LevelAdjusted(make_lgbm(params)).fit(f.loc[allv, feats], f.loc[allv, TARGET])   # cross-check forecast
+    # members of the adaptive ensemble (src/ensemble.py): Ridge joins LightGBM and the level-adjusted model; LEAR is fitted
+    # at forecast time. Their recent out-of-sample forecasts seed the weights.
+    from src import ensemble
+    from src.models import make_ridge
+    final["ridge"] = make_ridge(feats).fit(f.loc[allv, feats], f.loc[allv, TARGET])
+    ensemble.seed_member_log(f, feats, params)
     joblib.dump({"models": final, "features": feats, "spike_threshold_eur": thr_spike,
                  "spike_excess_threshold_eur": thr_excess,
                  "trained_until": str(f.loc[allv, "delivery_day"].max().date())},

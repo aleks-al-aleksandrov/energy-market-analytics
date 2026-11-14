@@ -234,3 +234,28 @@ class TorchMLP:
             out = self.net(torch.tensor(Xa)).squeeze(1).numpy()
         return out * self.y_sd + self.y_mu
 
+
+
+class AsinhTarget:
+    """Train on a variance-stabilised target: z = asinh((price - median) / MAD), predict back with sinh.
+
+    Standard in electricity price forecasting (spikes and negative prices stop dominating the loss). The median and MAD
+    come from the training rows only, so nothing from the test period leaks into the transform.
+    """
+
+    def __init__(self, model):
+        self.model = model
+
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        yv = np.asarray(y, dtype=float)
+        self.med = float(np.nanmedian(yv))
+        mad = float(np.nanmedian(np.abs(yv - self.med))) * 1.4826
+        self.scale = mad if mad > 1e-9 else float(np.nanstd(yv)) or 1.0
+        z = np.arcsinh((yv - self.med) / self.scale)
+        self.z_cap = float(np.nanmax(np.abs(z))) + 1.0           # an extrapolating inner model cannot blow up through sinh
+        self.model.fit(X, z)
+        return self
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        z = np.clip(self.model.predict(X), -self.z_cap, self.z_cap)
+        return np.sinh(z) * self.scale + self.med

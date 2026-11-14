@@ -144,3 +144,30 @@ def bootstrap_skill(pred: pd.DataFrame, model: str, naive: str, block_days: int 
     skills = 1 - am[idx].sum(axis=1) / an[idx].sum(axis=1)
     lo, hi = np.quantile(skills, [0.025, 0.975])
     return float(point), float(lo), float(hi)
+
+
+def walk_forward_blocks(f: pd.DataFrame, make_model: Callable, features: list[str], months: list[pd.Period],
+                        refit_days: int = 7, target: str = TARGET, min_train_days: int = 180,
+                        window_days: int | None = None) -> pd.Series:
+    """Walk-forward with a refit every `refit_days` delivery days (monthly refits go stale inside the month).
+
+    Train on all delivery days strictly before the block (optionally only the last `window_days`), predict the block.
+    Only days inside `months` are predicted, so the result is comparable hour for hour with `walk_forward`.
+    """
+    valid = f[target].notna()
+    day = f["delivery_day"]
+    in_scope = pd.PeriodIndex(day, freq="M").isin(months) & valid
+    days = np.sort(day[in_scope].unique())
+    out = []
+    for i in range(0, len(days), refit_days):
+        block = days[i:i + refit_days]
+        train = valid & (day < block[0])
+        if window_days is not None:
+            train &= day >= block[0] - np.timedelta64(window_days, "D")
+        test = in_scope & day.isin(block)
+        if train.sum() < min_train_days * 24 or test.sum() == 0:
+            continue
+        model = make_model()
+        model.fit(f.loc[train, features], f.loc[train, target])
+        out.append(pd.Series(model.predict(f.loc[test, features]), index=f.index[test]))
+    return pd.concat(out) if out else pd.Series(dtype=float)

@@ -66,6 +66,116 @@ def coverage(g: pd.DataFrame, lo: str, hi: str) -> dict:
                 above=float((g["actual"] > g[hi]).mean()), width=float((g[hi] - g[lo]).mean()))
 
 
+ACI_GAMMA = 0.05                      # step of the adaptive miss-rate target (chosen on CV months in src/phase1_experiment.py)
+ACI_WINDOW = 180
+TARGET_MISS = 1 - LEVEL               # each side of the band should be exceeded 10 % of the time
+ALPHA_RANGE = (0.005, 0.5)
+
+
+def _aci_step(alpha: float, miss: float, gamma: float = ACI_GAMMA) -> float:
+    """Adaptive conformal inference update: missing more often than planned lowers alpha, which widens the band."""
+    return float(np.clip(alpha + gamma * (TARGET_MISS - miss), *ALPHA_RANGE))
+
+
+def aci_offsets(p: pd.DataFrame, gamma: float = ACI_GAMMA, window: int = ACI_WINDOW,
+                min_days: int = MIN_HISTORY_DAYS) -> tuple[pd.DataFrame, dict]:
+    """Adaptive conformal offsets per delivery day, and the state to carry forward.
+
+    For day D the offset of each side is the (1 - alpha) quantile of that side's misses over the previous `window` days
+    (up to D-1: day-ahead prices of D-1 are published on D-2, so they are known at gate closure for D). After D is observed,
+    alpha moves by gamma * (0.10 - observed miss rate): a band that misses too often widens, one that never misses narrows.
+    Returns (offsets indexed by delivery day with a_lo / a_hi, state for the next day).
+    """
+    d = p.dropna(subset=["actual", "q10", "q90"])
+    day = d["delivery_day"].dt.normalize().to_numpy()
+    order = np.argsort(day, kind="stable")
+    day_s = day[order]
+    lo_s = (d["q10"] - d["actual"]).to_numpy()[order]
+    hi_s = (d["actual"] - d["q90"]).to_numpy()[order]
+    days = np.unique(day_s)
+    starts, ends = np.searchsorted(day_s, days, side="left"), np.searchsorted(day_s, days, side="right")
+    a_lo = a_hi = TARGET_MISS
+    rows = []
+    for i, D in enumerate(days):
+        w0 = np.searchsorted(days, D - np.timedelta64(window, "D"), side="left")
+        if i - w0 < min_days:
+            continue
+        sl = slice(starts[w0], ends[i - 1])
+        o_lo, o_hi = float(np.quantile(lo_s[sl], 1 - a_lo)), float(np.quantile(hi_s[sl], 1 - a_hi))
+        rows.append((D, o_lo, o_hi, a_lo, a_hi))
+        today = slice(starts[i], ends[i])
+        a_lo = _aci_step(a_lo, float(np.mean(lo_s[today] > o_lo)), gamma)
+        a_hi = _aci_step(a_hi, float(np.mean(hi_s[today] > o_hi)), gamma)
+    off = pd.DataFrame(rows, columns=["delivery_day", "a_lo", "a_hi", "alpha_lo", "alpha_hi"]).set_index("delivery_day")
+    state: dict = {}
+    if len(days) > min_days:
+        w0 = np.searchsorted(days, days[-1] - np.timedelta64(window - 1, "D"), side="left")
+        sl = slice(starts[w0], ends[-1])                                     # window ending on the last observed day
+        state = dict(method="aci", gamma=gamma, window_days=window, alpha_lo=a_lo, alpha_hi=a_hi,
+                     a_lo=float(np.quantile(lo_s[sl], 1 - a_lo)), a_hi=float(np.quantile(hi_s[sl], 1 - a_hi)),
+                     as_of=str(pd.Timestamp(days[-1]).date()))
+        state["_scores"] = pd.DataFrame({"delivery_day": pd.DatetimeIndex(day_s[sl]), "s_lo": lo_s[sl], "s_hi": hi_s[sl]})
+    return off, state
+
+
+def worst_rolling_coverage(g: pd.DataFrame, lo: str, hi: str, days: int = 30) -> float:
+    g = g.dropna(subset=["actual", lo, hi])
+    inside = ((g["actual"] >= g[lo]) & (g["actual"] <= g[hi])).groupby(g["delivery_day"].dt.normalize()).mean()
+    return float(inside.rolling(days, min_periods=days).mean().min()) if len(inside) >= days else float("nan")
+
+
+# ---------------------------------------------------------------------------------------------- live (daily) update
+BAND_LOG, BAND_SCORES = "band_log.csv", "band_scores.csv"
+
+
+def log_raw_band(out: pd.DataFrame) -> None:
+    """Remember the raw 10 / 90 % quantiles of a live forecast (first forecast of an hour wins), for the daily update."""
+    path = C.REPORTS / BAND_LOG
+    new = pd.DataFrame({"timestamp_utc": pd.to_datetime(out.index, utc=True), "delivery_day": out["delivery_day"].to_numpy(),
+                        "p10_raw": out["p10_raw_eur_mwh"].to_numpy(), "p90_raw": out["p90_raw_eur_mwh"].to_numpy()})
+    if path.exists():
+        old = pd.read_csv(path)
+        old["timestamp_utc"] = pd.to_datetime(old["timestamp_utc"], utc=True)
+        new = pd.concat([old, new]).drop_duplicates("timestamp_utc", keep="first")
+    new.sort_values("timestamp_utc").tail(24 * 400).to_csv(path, index=False)
+
+
+def update_live(actual: pd.Series) -> dict | None:
+    """Advance the adaptive band with every logged live day whose prices are now published. Returns the new state.
+
+    `actual` is the hourly price series (UTC index). Only days after the state's `as_of` are used, in order, and each day
+    is scored against the offsets that were in force before it was observed.
+    """
+    conf, logp, scp = C.REPORTS / "conformal_offsets.json", C.REPORTS / BAND_LOG, C.REPORTS / BAND_SCORES
+    if not (conf.exists() and logp.exists() and scp.exists()):
+        return None
+    st = json.loads(conf.read_text())
+    if st.get("method") != "aci":
+        return None
+    lg = pd.read_csv(logp)
+    lg["timestamp_utc"] = pd.to_datetime(lg["timestamp_utc"], utc=True)
+    lg["delivery_day"] = lg["delivery_day"].astype(str)
+    lg["actual"] = actual.reindex(pd.DatetimeIndex(lg["timestamp_utc"])).to_numpy()
+    scores = pd.read_csv(scp, parse_dates=["delivery_day"])
+    done = lg.groupby("delivery_day")["actual"].apply(lambda x: x.notna().all())
+    new_days = sorted(d for d in done[done].index if d > st["as_of"])
+    for D in new_days:
+        g = lg[lg["delivery_day"] == D]
+        s_lo, s_hi = (g["p10_raw"] - g["actual"]).to_numpy(), (g["actual"] - g["p90_raw"]).to_numpy()
+        st["alpha_lo"] = _aci_step(st["alpha_lo"], float(np.mean(s_lo > st["a_lo"])), st["gamma"])
+        st["alpha_hi"] = _aci_step(st["alpha_hi"], float(np.mean(s_hi > st["a_hi"])), st["gamma"])
+        scores = pd.concat([scores, pd.DataFrame({"delivery_day": pd.Timestamp(D), "s_lo": s_lo, "s_hi": s_hi})])
+        scores = scores[scores["delivery_day"] > pd.Timestamp(D) - pd.Timedelta(days=st["window_days"])]
+        st["a_lo"] = float(np.quantile(scores["s_lo"], 1 - st["alpha_lo"]))
+        st["a_hi"] = float(np.quantile(scores["s_hi"], 1 - st["alpha_hi"]))
+        st["as_of"] = D
+    if new_days:
+        st["live_days_applied"] = int(st.get("live_days_applied", 0)) + len(new_days)
+        conf.write_text(json.dumps(st, indent=2))
+        scores.to_csv(scp, index=False)
+    return st
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     p = pd.read_csv(C.REPORTS / "predictions.csv", parse_dates=["timestamp_utc", "delivery_day"])
@@ -85,17 +195,34 @@ def main() -> None:
     for split in ("cv", "holdout"):
         g = base[(base["split"] == split) & (base["delivery_day"] >= first_cal)]
         comp = pd.concat([comp, pd.DataFrame([dict(variant="raw quantile band", split=split, **coverage(g, "q10", "q90"))])])
+    # adaptive conformal inference, evaluated on the same days
+    aci_off, aci_state = aci_offsets(base)
+    aci_cal = apply(base, aci_off)
+    aci_cal = aci_cal[aci_cal["delivery_day"] >= first_cal]
+    aci_name = f"adaptive (ACI, gamma {ACI_GAMMA})"
+    for split in ("cv", "holdout"):
+        comp = pd.concat([comp, pd.DataFrame([dict(variant=aci_name, split=split,
+                                                   **coverage(aci_cal[aci_cal["split"] == split], "q10_cal", "q90_cal"))])])
     # window chosen on CV only: coverage closest to 80 %
     cv = comp[(comp.split == "cv") & comp.variant.str.startswith("conformal")].copy()
     cv["gap"] = (cv["coverage"] - 0.8).abs()
     best = cv.loc[cv["gap"].idxmin(), "variant"].replace("conformal ", "")
     window = None if best == "expanding" else int(best.rstrip("d"))
     log.info("chosen window (CV only): %s", best)
-    comp["chosen"] = comp["variant"].eq(f"conformal {best}")
+    # RULE (fixed in src/phase1_experiment.py before looking): the adaptive band replaces the fixed window if its CV coverage
+    # is within 1 point of 80 % and its worst 30-day CV coverage is better. The holdout plays no part.
+    fixed_cal = apply(base, offs[window])
+    fixed_cal = fixed_cal[fixed_cal["delivery_day"] >= first_cal]
+    cvf, cva = fixed_cal[fixed_cal["split"] == "cv"], aci_cal[aci_cal["split"] == "cv"]
+    worst_fixed, worst_aci = worst_rolling_coverage(cvf, "q10_cal", "q90_cal"), worst_rolling_coverage(cva, "q10_cal", "q90_cal")
+    use_aci = bool(aci_state) and abs(coverage(cva, "q10_cal", "q90_cal")["coverage"] - 0.8) <= 0.01 and worst_aci > worst_fixed
+    log.info("worst 30-day CV coverage: fixed %.3f, adaptive %.3f -> %s", worst_fixed, worst_aci, "adaptive" if use_aci else "fixed")
+    comp["chosen"] = comp["variant"].eq(aci_name if use_aci else f"conformal {best}")
+    comp["worst_30d_cv"] = comp["variant"].map({f"conformal {best}": worst_fixed, aci_name: worst_aci})
     comp.to_csv(C.REPORTS / "quantile_conformal.csv", index=False)
     log.info("\n%s", comp.round(3).to_string(index=False))
 
-    off = offs[window]
+    off = aci_off if use_aci else offs[window]
     cal = apply(p, off)
     p["q10_cal"], p["q90_cal"] = cal["q10_cal"], cal["q90_cal"]
     p.to_csv(C.REPORTS / "predictions.csv", index_label="timestamp_utc")
@@ -107,6 +234,13 @@ def main() -> None:
         "coverage_cal": ((d.actual >= d.q10_cal) & (d.actual <= d.q90_cal)).mean(),
         "width_raw": (d.q90 - d.q10).mean(), "width_cal": (d.q90_cal - d.q10_cal).mean()})).to_csv(
         C.REPORTS / "quantile_conformal_by_hour.csv")
+
+    if use_aci:      # state for the daily forecast, which keeps adapting between retrains (update_live)
+        aci_state.pop("_scores").to_csv(C.REPORTS / BAND_SCORES, index=False)
+        aci_state["rule"] = "adaptive conformal inference; adopted on CV months (coverage within 1 point of 80 %, better worst 30 days)"
+        json.dump(aci_state, open(C.REPORTS / "conformal_offsets.json", "w"), indent=2)
+        print(comp.round(3).to_string(index=False))
+        return
 
     # offsets for the next-day forecast: all days up to yesterday-1 are available at run time
     last = base["delivery_day"].dt.normalize().max()

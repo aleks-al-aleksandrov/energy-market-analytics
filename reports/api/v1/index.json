@@ -1,0 +1,11 @@
+{
+  "version": "v1",
+  "payloads": {
+    "forecast_latest": "forecast_latest.json",
+    "track_record": "track_record.json",
+    "metrics": "metrics.json",
+    "market_recent": "market_recent.json",
+    "battery_default": "battery_default.json",
+    "status": "status.json"
+  }
+}

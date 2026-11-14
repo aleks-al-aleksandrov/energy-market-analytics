@@ -55,6 +55,10 @@ def main() -> None:
     validate.run(h[h.index < d_start], strict=True, max_age_days=3)        # history up to D-1 must be healthy
     h = h[h.index < d_end]
     actual = h.loc[(h.index >= d_start), TARGET].copy() if TARGET in h else None
+    # recent published prices for the API / front end (the full market file is only rewritten at the weekly retrain)
+    zone_cols = [c for c in (f"price_{z}" for z in C.PRICE_ZONES) if c in h]
+    recent = h.loc[h.index >= d_start - pd.Timedelta(days=90), zone_cols].dropna(how="all").round(2)
+    recent.to_csv(C.REPORTS / "market_recent.csv", index_label="timestamp_utc")
     # gate-closure information set: no prices of day D (or later) may be visible
     price_cols = [c for c in h.columns if c.startswith("price_")]
     h.loc[h.index >= d_start, price_cols] = np.nan
@@ -71,18 +75,46 @@ def main() -> None:
     out = pd.DataFrame(index=X.index)
     out["time_local"] = X.index.tz_convert(C.LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
     out["forecast_eur_mwh"] = m["point"].predict(X)
+    out["forecast_lgbm_eur_mwh"] = out["forecast_eur_mwh"]
+    if "ridge" in m:      # adaptive ensemble (src/ensemble.py): weights follow each member's errors over the last 14 published days
+        try:
+            from src import ensemble
+            members = pd.DataFrame({"lightgbm": out["forecast_eur_mwh"], "ridge": m["ridge"].predict(X),
+                                    "level": m["level"].predict(X)}, index=X.index)
+            lear = ensemble.lear_forecast(f, [day.tz_localize(None)]).reindex(X.index)
+            if lear.notna().all():
+                members["lear"] = lear
+            weights = ensemble.member_weights(ensemble.read_log(), h[TARGET], day.tz_localize(None), list(members.columns))
+            out["forecast_eur_mwh"] = ensemble.combine(members, weights)
+            ensemble.log_members(members, day.tz_localize(None))
+            (C.REPORTS / "ensemble_live.json").write_text(json.dumps(
+                {"delivery_day": str(day.date()), "weights": {k: round(float(v), 4) for k, v in weights.items()},
+                 "window_days": ensemble.WINDOW_DAYS, "rule": "weights proportional to 1 / MAE^2 over the last 14 published days"}, indent=2))
+            log.info("ensemble weights: %s", {k: round(v, 2) for k, v in weights.items()})
+        except Exception as exc:          # the LightGBM forecast stands if any member fails
+            log.warning("ensemble skipped, LightGBM forecast used: %s", str(exc)[:160])
     if "level" in m:      # cross-check: forecast of the deviation from yesterday's mean, and a 50/50 blend (see robust_experiment)
         out["forecast_level_eur_mwh"] = m["level"].predict(X)
         out["forecast_blend_eur_mwh"] = 0.5 * out["forecast_eur_mwh"] + 0.5 * out["forecast_level_eur_mwh"]
     q = np.sort(np.column_stack([m["q10"].predict(X), out["forecast_eur_mwh"], m["q90"].predict(X)]), axis=1)
     out["p10_raw_eur_mwh"], out["p90_raw_eur_mwh"] = q[:, 0], q[:, 2]
     out["p10_eur_mwh"], out["p90_eur_mwh"] = q[:, 0], q[:, 2]
+    out["delivery_day"] = str(day.date())
     conf = C.REPORTS / "conformal_offsets.json"
+    try:                                  # adaptive band: score the live days whose prices are now published, then log today's
+        from src import calibrate
+        calibrate.update_live(h[TARGET])
+        calibrate.log_raw_band(out)
+    except Exception as exc:              # best effort: a band-state problem must never stop the forecast
+        log.warning("adaptive band update skipped: %s", str(exc)[:120])
     if conf.exists():   # conformal recalibration (src/calibrate.py): widen each side by its recent out-of-sample miss
         off = json.loads(conf.read_text())
         out["p10_eur_mwh"] = out["p10_raw_eur_mwh"] - off["a_lo"]
         out["p90_eur_mwh"] = out["p90_raw_eur_mwh"] + off["a_hi"]
         out["band_calibrated_as_of"] = off["as_of"]
+    # the point forecast (now an ensemble) must sit inside its own band: an adjustment may only ever widen the band around it
+    out["p10_eur_mwh"] = np.minimum(out["p10_eur_mwh"], out["forecast_eur_mwh"])
+    out["p90_eur_mwh"] = np.maximum(out["p90_eur_mwh"], out["forecast_eur_mwh"])
     out["spike_probability"] = m["spike"].predict_proba(X)[:, 1]
     if "spike_excess_threshold_eur" in bundle:   # level-relative definition: yesterday's daily mean + the P95 excess
         out["spike_threshold_eur"] = X["price_d1_mean"].to_numpy() + bundle["spike_excess_threshold_eur"]

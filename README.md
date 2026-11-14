@@ -11,7 +11,7 @@ could earn from them, and a bilingual dashboard (English / Bulgarian, dark / lig
 [![next-day-forecast](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml/badge.svg)](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml)
 ![python](https://img.shields.io/badge/python-3.12-blue)
 ![streamlit](https://img.shields.io/badge/dashboard-Streamlit-ff4b4b)
-![tests](https://img.shields.io/badge/tests-91%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-111%20passing-brightgreen)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 **[Open the live dashboard](https://energy-market-analytics-1.streamlit.app/)** (sign-in required, see [Sign-in](#sign-in)) ·
@@ -38,14 +38,45 @@ tests, experiment tracking, drift monitoring).
 
 | | Result |
 |---|---|
-| **Forecast skill** | Beats "same hour yesterday" by **21 to 23 %** over 25 walk-forward months (95 % interval 17 to 26 %), statistically significant (Diebold-Mariano p < 0.001) |
-| **Uncertainty** | Calibrated 10 to 90 % band covers **80 %** of CV outcomes; a level-relative spike classifier gives about 7x lift over the base rate |
+| **Forecast skill** | The production forecast, an adaptive ensemble of four models, beats "same hour yesterday" by **26 %** over 25 walk-forward months (95 % interval 23 to 29 %). The previous single model managed 21 %; the gain is significant (Diebold-Mariano p < 0.001) |
+| **Uncertainty** | An adaptive 10 to 90 % band covers **80 %** of CV outcomes and keeps adjusting every day; its worst 30-day stretch is 71 % (fixed-window band: 67 %) |
 | **Battery value** | About **EUR 100k per MW-year** with a forecast-guided 1 MW / 2 MWh battery, **88 %** of perfect foresight (naive rule: 83 %) |
-| **Honest caveat** | On the final holdout (Aug to Oct 2026, a price surge beyond the training range) the main model is only +2.7 % better than naive (95 % interval -10 % to +19 %, **not significant**) |
-| **What did not help** | Fuel and carbon prices, interconnector capacities and plant outages did not improve the forecast under a pre-set adoption rule; the neural net lost out of regime |
-| **How it is checked** | 91 automated tests (leakage tests on the whole feature builder, evaluation maths, walk-forward splits, battery physics, every dashboard page in two themes and two languages), CI on every push, data validation that stops the pipeline on bad inputs |
+| **Honest caveat** | Aug to Oct 2026 was a price surge beyond the training range. The old model was only +2.7 % better than naive there; the new ensemble is +22 %, but those months were inspected while building it, so they are **no longer an untouched test**. The clean evidence is the live track record, which is still only days long |
+| **What did not help** | Fuel and carbon prices, interconnector capacities, plant outages, and bias-corrected battery scheduling. German prices plus neighbours' forecasts helped in normal months but hurt badly in the surge, so they are held back |
+| **How it is checked** | 111 automated tests (leakage tests on the feature builder and on every new component, evaluation maths, battery physics, API, every dashboard page), CI on every push for the Python code and the web app, data validation that stops the pipeline on bad inputs, and an issue opened automatically if the daily forecast fails |
 
 Details, tables and the reasoning behind each number are in [Headline results](#headline-results).
+
+## What changed in November 2026
+
+The first version was honest but fragile: one model refitted monthly, a band that only refreshed weekly, and a dashboard as the
+only way to get at the numbers. Every change below was accepted or rejected by a rule written down before the result was known
+(`src/phase1_experiment.py`, `reports/phase1_metrics.csv`).
+
+| Candidate | CV error (EUR/MWh) | CV skill | Aug–Oct 2026 skill (information only) | Verdict |
+|---|---|---|---|---|
+| LightGBM, monthly refit (previous production) | 22.84 | 21.1 % | 2.7 % | replaced |
+| Weekly refit | 22.47 | 22.4 % | 11.4 % | passes |
+| Asinh (variance-stabilised) target, weekly refit | 21.95 | 24.2 % | 4.7 % | passes |
+| LEAR benchmark (per-hour lasso, the literature's bar) | 21.61 | 25.3 % | 12.9 % | passes |
+| **Adaptive ensemble of four** (LightGBM, Ridge, level-adjusted LightGBM, LEAR; weights from the last 14 days of error) | **21.35** | **26.3 %** | 22.0 % | **adopted** |
+
+* **Adaptive ensemble in production** (`src/ensemble.py`). When prices leave the range the trees were trained on, the members
+  that can extrapolate take the weight automatically. Weights use only errors known at gate closure.
+* **Adaptive conformal band** (`src/calibrate.py`). Each side of the band widens after it misses and narrows when it is too
+  cautious, every day, not only at the weekly retrain. In the first live week the old band held the price in only 48 % of hours;
+  this is the fix for that.
+* **Serving layer** (`src/serving.py`): one module builds every payload. A FastAPI service (`api/main.py`) and a static JSON
+  export (`reports/api/v1/`, refreshed daily) return the same numbers.
+* **Web app** (`web/`, Next.js): a fast bilingual front end with an interactive forecast chart and an in-browser battery planner.
+  The Streamlit dashboard stays as the analyst view.
+* **Operations:** the forecast workflow publishes fresh prices and state files daily, and opens a GitHub issue if a run fails.
+* **Rejected, and recorded:** scheduling the battery on a bias-corrected forecast changed revenue by less than the noise.
+  Regional inputs (German prices, neighbours' forecasts) lowered CV error from 20.1 to 19.1 but raised it from 30.0 to 39.9 in
+  the surge months, so they are held out of production (`features.HELD_GROUPS`).
+
+Sections further down still describe the first version in detail (tables, experiments, reasoning); where they differ from the
+table above, the table above is current.
 
 ## The dashboard
 
@@ -91,6 +122,14 @@ EMA_AUTH_DISABLED=1 streamlit run app/dashboard.py        # Windows PowerShell: 
 ```
 
 `EMA_AUTH_DISABLED=1` switches the sign-in off for local work only. Never set it on a hosted copy.
+
+**Run the web app or the API** (both read the same published payloads):
+
+```bash
+cd web && npm install && npm run dev                    # http://localhost:3000  (see web/README.md for deployment)
+uvicorn api.main:app --port 8000                        # http://localhost:8000/docs
+python -m src.export_api                                # rewrite reports/api/v1/*.json
+```
 
 **Re-run the whole pipeline** (needs an [ENTSO-E API key](https://transparency.entsoe.eu/); about 15 minutes for the first download, about 45 minutes for the full model run on a laptop CPU):
 
@@ -536,6 +575,14 @@ src/
   predict_next_day.py  next delivery-day forecast file
   build_notebooks.py   generates and executes notebooks/
   run_all.py           one command end to end
+  ensemble.py          production point forecast: adaptive ensemble of four members, LEAR, member log and weights
+  phase1_experiment.py candidates vs the previous model under a pre-set rule (weekly refit, asinh, LEAR, ensembles, adaptive band)
+  regional_experiment.py  German prices and neighbours' forecasts: tested, held back
+  battery_uncertainty.py  bias-corrected battery scheduling: tested, rejected
+  serving.py           builds every JSON payload from reports/ (forecast, track record, metrics, market, battery plan, status)
+  export_api.py        writes the payloads to reports/api/v1/ for static hosting
+api/                   FastAPI service over the same payloads (optional API key; refuses to start open in hosted mode)
+web/                   Next.js front end: Tomorrow, Battery, Track record, Market, Model (English/Bulgarian, dark/light, sign-in gate)
 app/                   Streamlit dashboard: dashboard.py (router), home.py, overview.py, views/ (9 pages), auth.py (sign-in), theme.py (header, palettes), style.css + style_light.css, i18n.py + i18n_bg.py (English/Bulgarian), signature.py (market clock, ribbon, Ask the market)
 notebooks/             01 data quality · 02 insights · 03 forecasting · 04 ML deep dive · 04b weather · 05 battery
 reports/               all results the dashboard reads (CSV / Parquet / figures)

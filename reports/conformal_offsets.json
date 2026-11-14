@@ -1,7 +1,11 @@
 {
+  "method": "aci",
+  "gamma": 0.05,
   "window_days": 180,
-  "a_lo": -2.353815572897536,
-  "a_hi": 17.0323155090355,
+  "alpha_lo": 0.2923949275362322,
+  "alpha_hi": 0.010833333333333332,
+  "a_lo": -19.4501033777973,
+  "a_hi": 58.81507261268759,
   "as_of": "2026-10-31",
-  "rule": "90 % conformal quantile of recent one-sided misses; window chosen on CV months only"
+  "rule": "adaptive conformal inference; adopted on CV months (coverage within 1 point of 80 %, better worst 30 days)"
 }

@@ -1,0 +1,5 @@
+{
+  "schedule_on": "forecast",
+  "candidates_passing": [],
+  "rule": "higher CV revenue and a 95 % block-bootstrap interval of the daily revenue gain above zero; holdout reported only"
+}

@@ -1,0 +1,30 @@
+{
+  "adopt": false,
+  "features": [
+    "price_DE_LU_lag24",
+    "price_DE_LU_d1_mean",
+    "spread_BG_DE_LU_lag24",
+    "reg_res_fc_RO",
+    "reg_ren_share_RO",
+    "reg_res_fc_GR",
+    "reg_ren_share_GR",
+    "reg_res_fc_HU",
+    "reg_ren_share_HU",
+    "reg_res_fc_DE_LU",
+    "reg_ren_share_DE_LU",
+    "reg_res_fc_see"
+  ],
+  "n_features": 12,
+  "coverage_min": 0.998,
+  "cv_months": "2025-08..2026-07",
+  "cv_mae_without": 20.127402741482165,
+  "cv_mae_with": 19.118449052897837,
+  "dm_p": 0.02642341490809401,
+  "rule": "adopt iff LightGBM MAE on the last 12 CV months is lower with the group",
+  "note": "optional groups: capacity, fuels; held groups: regional",
+  "passes_cv_rule": true,
+  "held_back": true,
+  "holdout_mae_without": 30.015118216607945,
+  "holdout_mae_with": 39.94572236955372,
+  "reason": "passes the CV rule but is more than 5 % worse in the Aug-Oct 2026 surge; held back pending a test inside the ensemble"
+}

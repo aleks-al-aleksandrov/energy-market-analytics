@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: write
+  issues: write          # a failed run opens an issue (see the last step)
 
 jobs:
   forecast:
@@ -68,6 +69,8 @@ jobs:
         run: python -m src.predict_next_day
       - name: Monte Carlo revenue range for the new forecast
         run: python -m src.montecarlo
+      - name: Export the API payloads (static JSON for the front end)
+        run: python -m src.export_api
       - name: Re-check whether outage history is testable (weekly)
         if: github.event.schedule == '0 3 * * 1' || github.event_name == 'workflow_dispatch'
         run: python -m src.retest_optional
@@ -75,9 +78,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -f reports/forecast_next_day.csv reports/ttf_snapshots.csv reports/forecast_log.csv reports/live_track_record.csv reports/outage_pit.csv reports/mc_summary.json reports/retest_status.json
+          git add -f reports/forecast_next_day.csv reports/ttf_snapshots.csv reports/forecast_log.csv reports/live_track_record.csv reports/outage_pit.csv reports/mc_summary.json reports/retest_status.json reports/conformal_offsets.json
+          for f in reports/band_log.csv reports/band_scores.csv reports/market_recent.csv reports/member_log.csv reports/ensemble_live.json reports/api; do [ -e "$f" ] && git add -f "$f"; done
           # After a retrain the dashboard's other inputs changed too (metrics, SHAP, battery study ...): publish all of reports/,
           # so a hosted copy that reads the repository shows current numbers. Weekly only, to keep the repository small.
           if [ "${{ github.event.schedule }}" = "0 3 * * 1" ] || [ "${{ inputs.retrain }}" = "true" ]; then git add -f reports; fi
           git commit -m "Next-day forecast $(date -u +%Y-%m-%d)" || echo "no change"
           git push
+      - name: Open an issue when the run fails (so a missed forecast never goes unnoticed)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --repo "$GITHUB_REPOSITORY"             --title "Daily forecast failed on $(date -u +%Y-%m-%d)"             --body "The next-day-forecast workflow failed, so no forecast was published for tomorrow. Log: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

@@ -114,6 +114,11 @@ def entsoe_jobs(client) -> dict[str, Callable]:
     jobs: dict[str, Callable] = {}
     for z in C.PRICE_ZONES:
         jobs[f"prices/{z}"] = lambda s, e, z=z: client.query_day_ahead_prices(z, start=s, end=e)
+    for z in C.REGION_PRICE_ZONES:
+        jobs[f"prices/{z}"] = lambda s, e, z=z: client.query_day_ahead_prices(z, start=s, end=e)
+    for z in C.REGION_FORECAST_ZONES:
+        jobs[f"load_forecast/{z}"] = lambda s, e, z=z: client.query_load_forecast(z, start=s, end=e)
+        jobs[f"wind_solar_forecast/{z}"] = lambda s, e, z=z: client.query_wind_and_solar_forecast(z, start=s, end=e)
     bg = C.FOCUS_ZONE
     jobs[f"load/{bg}"] = lambda s, e: client.query_load(bg, start=s, end=e)
     jobs[f"load_forecast/{bg}"] = lambda s, e: client.query_load_forecast(bg, start=s, end=e)

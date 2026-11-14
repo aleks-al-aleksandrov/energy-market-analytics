@@ -41,7 +41,7 @@ def _day_start_utc(day: pd.Timestamp) -> pd.Timestamp:
 
 def _features_of_day(h: pd.DataFrame) -> pd.DataFrame:
     f = F.build_features(h)
-    cols = F.feature_columns(respect_choice=False)
+    cols = F.feature_columns(respect_choice=False, include_held=True)     # every group, including the ones held out of production
     return f.loc[f["delivery_day"] == DAY, cols]
 
 
@@ -79,6 +79,37 @@ def test_price_of_previous_day_does_change_lag_features():
 
 
 def test_target_is_not_a_feature():
-    cols = F.feature_columns(respect_choice=False)
+    cols = F.feature_columns(respect_choice=False, include_held=True)     # every group, including the ones held out of production
     assert F.TARGET not in cols and "is_negative" not in cols
     assert not any(c.startswith(("gen_", "gencons_", "load_actual", "residual_load_actual")) for c in cols)
+
+
+def test_regional_group_uses_german_prices_only_up_to_d_minus_1():
+    """The optional regional group: the German price enters as a D-1 lag; shocking it on D or later changes nothing."""
+    h = _hourly(2)
+    rng = np.random.default_rng(5)
+    h["price_DE_LU"] = h["price_BG"] * 0.8 + rng.normal(0, 5, len(h))
+    for z in ("RO", "GR", "HU", "DE_LU"):
+        h[f"reg_res_fc_{z}"] = rng.normal(5000, 400, len(h))
+        h[f"reg_ren_share_{z}"] = rng.uniform(0, 1, len(h))
+    base = _features_of_day(h)
+    reg = F.FEATURE_GROUPS["regional"]
+    assert {"price_DE_LU_lag24", "spread_BG_DE_LU_lag24", "reg_res_fc_see"} <= set(reg)
+    shocked = h.copy()
+    shocked.loc[shocked.index >= _day_start_utc(DAY), "price_DE_LU"] = 9999.0
+    pd.testing.assert_frame_equal(base, _features_of_day(shocked))
+    earlier = h.copy()
+    cut = _day_start_utc(DAY)
+    earlier.loc[(earlier.index >= cut - pd.Timedelta(days=1)) & (earlier.index < cut), "price_DE_LU"] += 50
+    assert not _features_of_day(earlier)["price_DE_LU_lag24"].equals(base["price_DE_LU_lag24"])   # D-1 does feed the lag
+
+
+def test_held_groups_never_reach_production_features():
+    """A group in HELD_GROUPS is built and testable, but feature_columns() leaves it out unless asked explicitly."""
+    h = _hourly(3)
+    h["price_DE_LU"] = h["price_BG"] * 0.9
+    F.build_features(h)
+    assert F.FEATURE_GROUPS["regional"]
+    default = set(F.feature_columns(respect_choice=False))
+    assert not default & set(F.FEATURE_GROUPS["regional"])
+    assert set(F.FEATURE_GROUPS["regional"]) <= set(F.feature_columns(respect_choice=False, include_held=True))
