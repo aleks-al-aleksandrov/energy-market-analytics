@@ -210,6 +210,17 @@ export const BG: Record<string, string> = {
   "Ridge, weekly refit": "Ridge, седмично преобучение",
   "Level-adjusted LightGBM, weekly refit": "LightGBM с корекция на ниво, седмично преобучение",
 
+  // quarter-hour
+  "Resolution": "Резолюция",
+  "Hourly": "По часове",
+  "15 minutes": "15 минути",
+  "Time": "Час",
+  "The market clears in 15-minute steps; the quarter view adds the shape inside each hour.": "Пазарът търгува на 15-минутни интервали; изгледът по четвъртинки добавя формата вътре във всеки час.",
+  "15-minute forecasts": "15-минутни прогнози",
+  "15-minute prices: error cut from €{0} to €{1}": "15-минутни цени: грешката намалява от €{0} на €{1}",
+  "Since October 2025 the market clears every 15 minutes, and a quarter sits on average €{0} away from its hour's mean. A second model predicts that shape inside each hour from the ramps in the forecasts and from recent days. It is added on top of the hourly forecast without changing it.": "От октомври 2025 пазарът търгува на всеки 15 минути, а една четвъртинка е средно на €{0} от средната за своя час. Втори модел прогнозира тази форма вътре във всеки час от наклоните в прогнозите и от последните дни. Тя се добавя върху почасовата прогноза, без да я променя.",
+  "The 15-minute model has only 13 months of history to learn from, so its results are less settled than the hourly ones.": "15-минутният модел има само 13 месеца история, от която да учи, затова резултатите му са по-малко устойчиви от почасовите.",
+
   // sign-in
   "Sign in": "Вход",
   "Password": "Парола",

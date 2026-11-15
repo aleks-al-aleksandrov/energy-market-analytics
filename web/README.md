@@ -5,7 +5,7 @@ The public face of the project: a Next.js app that reads the JSON payloads the P
 
 | Page | What it shows |
 |---|---|
-| `/` Tomorrow | Headline computed from the forecast, the hourly chart with its 10–90 % range, five plain questions that light up the chart, an hour table |
+| `/` Tomorrow | Headline computed from the forecast, the hourly chart with its 10–90 % range and a 15-minute view, five plain questions that light up the chart, an hour table |
 | `/battery` | Interactive battery plan: power, duration, efficiency, cycles and wear cost; solved in the browser |
 | `/track-record` | Every live forecast scored against the published price and against "same as yesterday" |
 | `/market` | Recent day-ahead prices for Bulgaria, Romania, Greece and Hungary |

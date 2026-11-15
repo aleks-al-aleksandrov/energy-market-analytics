@@ -253,6 +253,17 @@ def main(f: pd.DataFrame, p: pd.DataFrame) -> None:
                  "trained_until": str(f.loc[allv, "delivery_day"].max().date())},
                 C.MODELS_DIR / "final_models.joblib")
 
+    # ------------------------------------------------------------------ quarter-hour shape model (src/quarter_hour.py)
+    try:
+        from src import quarter_hour
+        qc = C.REPORTS / "quarter_choice.json"
+        shape = json.loads(qc.read_text())["shape"] if qc.exists() else "flat"
+        if shape != "flat":
+            quarter_hour.train_final(f, p["lightgbm"], shape)
+            log.info("quarter-hour shape model trained (%s)", shape)
+    except Exception as exc:                      # the hourly forecast must never depend on this
+        log.warning("quarter-hour shape model skipped: %s", str(exc)[:160])
+
     # ------------------------------------------------------------------ ablation (last 12 CV months)
     log.info("feature-group ablation ...")
     abl_months = cv[-12:]

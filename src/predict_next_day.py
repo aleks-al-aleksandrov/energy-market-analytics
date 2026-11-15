@@ -128,6 +128,19 @@ def main() -> None:
     out["model_trained_until"] = bundle["trained_until"]
     out["generated_at"] = pd.Timestamp.now(tz=C.LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
     out.round(3).to_csv(C.REPORTS / "forecast_next_day.csv", index_label="timestamp_utc")
+    q15_path = C.REPORTS / "forecast_next_day_15min.csv"
+    try:                                  # quarter-hour forecast = hourly forecast + within-hour shape (src/quarter_hour.py)
+        from src import quarter_hour
+        qb = C.MODELS_DIR / quarter_hour.BUNDLE
+        if qb.exists():
+            q15 = quarter_hour.forecast_quarters(joblib.load(qb), out[["forecast_eur_mwh", "p10_eur_mwh", "p90_eur_mwh"]], f)
+            q15["delivery_day"] = str(day.date())
+            q15.round(3).to_csv(q15_path, index_label="timestamp_utc")
+        elif q15_path.exists():
+            q15_path.unlink()             # never leave yesterday's quarters next to today's hours
+    except Exception as exc:
+        log.warning("quarter-hour forecast skipped: %s", str(exc)[:160])
+        q15_path.unlink(missing_ok=True)
     from src import track_record
     track_record.append_forecast(out, pd.Timestamp.now(tz="UTC"))     # live track record (only pre-gate-closure runs count)
     track_record.update()

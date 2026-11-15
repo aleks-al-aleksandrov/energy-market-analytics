@@ -89,6 +89,18 @@ export function ModelView({ metrics, forecast }: { metrics: Metrics | null; fore
         </section>
       )}
 
+      {metrics?.quarter_hour && metrics.quarter_choice && metrics.quarter_choice.shape !== "flat" && (() => {
+        const row = (c: string, sp: string) => metrics.quarter_hour!.find((r) => r.candidate === c && r.split === sp);
+        const flat = row("flat", "cv"), best = row(metrics.quarter_choice!.shape, "cv");
+        if (!flat || !best) return null;
+        return (
+          <section className="card card-pad mt-4" aria-label={t("15-minute forecasts")}>
+            <h2 className="text-lg font-bold">{t("15-minute prices: error cut from €{0} to €{1}", n(flat.price_mae, 1), n(best.price_mae, 1))}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-text-2">{t("Since October 2025 the market clears every 15 minutes, and a quarter sits on average €{0} away from its hour's mean. A second model predicts that shape inside each hour from the ramps in the forecasts and from recent days. It is added on top of the hourly forecast without changing it.", n(metrics.quarter_choice!.mean_abs_dev, 1))}</p>
+          </section>
+        );
+      })()}
+
       <section className="card card-pad mt-4" aria-label={t("Tested and rejected")}>
         <h2 className="text-lg font-bold">{t("Tested and rejected")}</h2>
         <p className="mt-1 text-sm text-text-2">{t("Ideas that sounded right and did not improve the forecast under the same rule. They stay out.")}</p>
@@ -107,7 +119,7 @@ export function ModelView({ metrics, forecast }: { metrics: Metrics | null; fore
       <section className="card card-pad mt-4" aria-label={t("Limits")}>
         <h2 className="text-lg font-bold">{t("Limits")}</h2>
         <ul className="mt-3 grid gap-2 text-sm leading-relaxed text-text-2">
-          <li>• {t("Forecasts are hourly averages; the market now clears in 15-minute steps.")}</li>
+          <li>• {t("The 15-minute model has only 13 months of history to learn from, so its results are less settled than the hourly ones.")}</li>
           <li>• {t("Sudden regime changes are still the weak point: the blend adapts within days, not hours.")}</li>
           <li>• {t("The battery figures cover day-ahead arbitrage only and assume the battery does not move the price.")}</li>
         </ul>

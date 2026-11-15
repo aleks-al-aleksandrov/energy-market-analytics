@@ -23,6 +23,7 @@ function window3(hours: Forecast["hours"], pick: "min" | "max"): number[] {
 export function TomorrowView({ forecast, track }: { forecast: Forecast | null; track: TrackRecord | null }) {
   const { t, n, date } = usePrefs();
   const [q, setQ] = useState<Q>("cheap");
+  const [res, setRes] = useState<"hour" | "quarter">("hour");
 
   const d = useMemo(() => {
     if (!forecast?.available) return null;
@@ -71,6 +72,11 @@ export function TomorrowView({ forecast, track }: { forecast: Forecast | null; t
     },
   };
   const a = answers[q];
+  const quarters = forecast.quarters?.length ? forecast.quarters.map((x) => ({ ...x, spike_probability: null, cross_check: null })) : null;
+  const fine = res === "quarter" && quarters != null;
+  const points = fine ? quarters! : d.hours;
+  // a highlighted hour covers its four quarters
+  const lit = fine ? a.highlight.flatMap((i) => quarters!.map((x, j) => (x.hour_local === d.hours[i].hour_local ? j : -1)).filter((j) => j >= 0)) : a.highlight;
 
   return (
     <>
@@ -101,13 +107,20 @@ export function TomorrowView({ forecast, track }: { forecast: Forecast | null; t
           ))}
         </div>
         <p className="mb-4 max-w-3xl rounded-xl border border-border bg-surface-2 p-4 leading-relaxed" aria-live="polite">{a.text}</p>
-        <ForecastChart hours={d.hours} highlight={a.highlight} highlightTone={a.tone} />
+        {quarters && (
+          <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label={t("Resolution")}>
+            <button className="pill" aria-pressed={!fine} onClick={() => setRes("hour")}>{t("Hourly")}</button>
+            <button className="pill" aria-pressed={fine} onClick={() => setRes("quarter")}>{t("15 minutes")}</button>
+            <span className="text-sm text-muted">{t("The market clears in 15-minute steps; the quarter view adds the shape inside each hour.")}</span>
+          </div>
+        )}
+        <ForecastChart hours={points} highlight={lit} highlightTone={a.tone} showCrossCheck={!fine} />
         <TableToggle>
           <table className="data">
-            <thead><tr><th>{t("Hour")}</th><th className="n">{t("Forecast")}</th><th className="n">{t("Low (10%)")}</th><th className="n">{t("High (90%)")}</th><th className="n">{t("Spike risk")}</th></tr></thead>
+            <thead><tr><th>{fine ? t("Time") : t("Hour")}</th><th className="n">{t("Forecast")}</th><th className="n">{t("Low (10%)")}</th><th className="n">{t("High (90%)")}</th><th className="n">{t("Spike risk")}</th></tr></thead>
             <tbody>
-              {d.hours.map((h) => (
-                <tr key={h.timestamp_utc}><td className="num">{hh(h.hour_local)}</td><td className="n font-semibold">{n(h.forecast, 1)}</td><td className="n">{n(h.p10, 1)}</td><td className="n">{n(h.p90, 1)}</td><td className="n">{h.spike_probability == null ? "–" : `${n(h.spike_probability * 100)}%`}</td></tr>
+              {points.map((h) => (
+                <tr key={h.timestamp_utc}><td className="num">{`${String(h.hour_local).padStart(2, "0")}:${String(h.minute ?? 0).padStart(2, "0")}`}</td><td className="n font-semibold">{n(h.forecast, 1)}</td><td className="n">{n(h.p10, 1)}</td><td className="n">{n(h.p90, 1)}</td><td className="n">{h.spike_probability == null ? "–" : `${n(h.spike_probability * 100)}%`}</td></tr>
               ))}
             </tbody>
           </table>

@@ -3,6 +3,7 @@
 export type ForecastHour = {
   timestamp_utc: string; time_local: string; hour_local: number;
   forecast: number; p10: number; p90: number; spike_probability: number | null; cross_check: number | null;
+  minute?: number;
 };
 
 export type Forecast = {
@@ -16,6 +17,7 @@ export type Forecast = {
     max_spike_probability: number | null; models_disagree_by: number | null; models_disagree: boolean;
   };
   hours: ForecastHour[];
+  quarters?: { timestamp_utc: string; time_local: string; hour_local: number; minute: number; forecast: number; p10: number; p90: number }[] | null;
   ensemble?: { delivery_day: string; weights: Record<string, number>; window_days: number } | null;
   disclaimer: string;
 };
@@ -36,6 +38,8 @@ export type Metrics = {
   phase1_choice?: { point_forecast: string; baseline: string; rule: string; candidates_passing: string[]; band: string; band_rule: string; holdout_note: string };
   phase1?: { model: string; split: string; MAE: number; skill_vs_naive: number; skill_lo: number | null; skill_hi: number | null; delta_vs_baseline: number | null; DM_p: number | null }[];
   battery_uncertainty_choice?: { schedule_on: string; candidates_passing: string[] };
+  quarter_hour?: { candidate: string; split: string; shape_mae: number; price_mae: number; delta_vs_flat: number | null; DM_p: number | null }[];
+  quarter_choice?: { shape: string; mean_abs_dev: number; band_coverage?: Record<string, { hourly_band_only: number; with_addon: number; n: number }> };
   feature_choice?: Record<string, unknown>; regional_choice?: { adopt: boolean; held_back?: boolean; cv_mae_without: number; cv_mae_with: number; holdout_mae_without?: number; holdout_mae_with?: number; n_features: number };
   caveat?: string;
 };

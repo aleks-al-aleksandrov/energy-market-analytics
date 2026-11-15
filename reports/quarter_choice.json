@@ -1,0 +1,25 @@
+{
+  "shape": "lgbm",
+  "candidates_passing": [
+    "prof7",
+    "interp",
+    "lgbm"
+  ],
+  "rule": "lowest quarter-hour MAE on CV months, at least 0.1 below flat with Diebold-Mariano p < 0.05",
+  "cv_months": "2026-01..2026-07",
+  "holdout_months": "2026-08..2026-10",
+  "band_coverage": {
+    "cv_later_months": {
+      "hourly_band_only": 0.7801400273224044,
+      "with_addon": 0.9007001366120219,
+      "n": 11712
+    },
+    "holdout": {
+      "hourly_band_only": 0.7870076957899502,
+      "with_addon": 0.8901086464463558,
+      "n": 8836
+    }
+  },
+  "mean_abs_dev": 10.738400664747807,
+  "note": "15-minute history starts 2025-10; Aug-Oct 2026 reported only"
+}

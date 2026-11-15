@@ -75,6 +75,20 @@ def _ensemble_live(delivery_day: str) -> dict | None:
     return e if e.get("delivery_day") == delivery_day else None
 
 
+def _quarters(delivery_day: str) -> list[dict] | None:
+    """15-minute forecast for the same delivery day (None until the shape model has been trained)."""
+    p = _r("forecast_next_day_15min.csv")
+    if not p.exists():
+        return None
+    q = pd.read_csv(p)
+    if q.empty or str(q["delivery_day"].iloc[0]) != delivery_day:
+        return None
+    return [dict(timestamp_utc=pd.Timestamp(t).isoformat(), time_local=l, hour_local=int(l[11:13]), minute=int(l[14:16]),
+                 forecast=a, p10=b, p90=c)
+            for t, l, a, b, c in zip(pd.to_datetime(q["timestamp_utc"], utc=True), q["time_local"].astype(str), q["forecast_eur_mwh"],
+                                     q["p10_eur_mwh"], q["p90_eur_mwh"])]
+
+
 def forecast_latest() -> dict:
     f = _load_forecast()
     if f is None or f.empty:
@@ -111,6 +125,7 @@ def forecast_latest() -> dict:
                      models_disagree=bool(disagreement is not None and disagreement > 0.10)),
         hours=hours,
         ensemble=_ensemble_live(str(f["delivery_day"].iloc[0])),
+        quarters=_quarters(str(f["delivery_day"].iloc[0])),
         disclaimer="Forecast and analysis only. Not trading or investment advice."))
 
 
@@ -157,7 +172,10 @@ def model_metrics() -> dict:
     p = _r("battery_uncertainty.csv")
     if p.exists():
         out["battery_uncertainty"] = _records(pd.read_csv(p))
-    for name in ("battery_uncertainty_choice.json", "ensemble_live.json"):
+    p = _r("quarter_metrics.csv")
+    if p.exists():
+        out["quarter_hour"] = _records(pd.read_csv(p))
+    for name in ("battery_uncertainty_choice.json", "ensemble_live.json", "quarter_choice.json"):
         q = _r(name)
         if q.exists():
             out[name.replace(".json", "")] = _clean(json.loads(q.read_text()))

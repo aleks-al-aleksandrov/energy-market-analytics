@@ -48,6 +48,12 @@ export function ForecastChart({ hours, highlight = [], highlightTone = "accent",
   };
   const tipLeft = hover != null ? Math.min(Math.max(g.x(hover) - 86, 4), width - 176) : 0;
   const xEvery = width < 520 ? 4 : 2;
+  const perHour = hours.some((h) => (h.minute ?? 0) !== 0) ? 4 : 1;
+  const clock = (h: ForecastHour) => `${String(h.hour_local).padStart(2, "0")}:${String(h.minute ?? 0).padStart(2, "0")}`;
+  const endClock = (h: ForecastHour) => {
+    const total = h.hour_local * 60 + (h.minute ?? 0) + 60 / perHour;
+    return `${String(Math.floor(total / 60) % 24).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  };
 
   return (
     <div ref={ref} className="relative select-none">
@@ -67,14 +73,14 @@ export function ForecastChart({ hours, highlight = [], highlightTone = "accent",
         ))}
         <path d={g.band} fill="var(--series-soft)" />
         {showCrossCheck && <path d={g.line("cross_check")} fill="none" stroke="var(--violet)" strokeWidth="1.5" strokeDasharray="4 4" opacity=".85" />}
-        <path d={g.line("forecast")} fill="none" stroke="var(--series)" strokeWidth="2.25" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={g.line("forecast")} fill="none" stroke="var(--series)" strokeWidth={perHour === 4 ? 1.75 : 2.25} strokeLinejoin="round" strokeLinecap="round" />
         {[g.iMin, g.iMax].map((i, k) => (
           <g key={k}>
             <circle cx={g.x(i)} cy={g.y(hours[i].forecast)} r="4.5" fill="var(--series)" stroke="var(--surface)" strokeWidth="2" />
             <text x={Math.min(Math.max(g.x(i), m.l + 20), width - m.r - 24)} y={g.y(hours[i].forecast) + (k === 0 ? 20 : -12)} textAnchor="middle" fontSize="12" fontWeight="700" fill="var(--text)" className="num">€{n(hours[i].forecast)}</text>
           </g>
         ))}
-        {hours.map((h, i) => (i % xEvery === 0 ? (
+        {hours.map((h, i) => ((h.minute ?? 0) === 0 && Math.round(i / perHour) % xEvery === 0 ? (
           <text key={i} x={g.x(i)} y={H - 9} textAnchor="middle" fontSize="11" fill="var(--muted)" className="num">{String(h.hour_local).padStart(2, "0")}</text>
         ) : null))}
         {hv && hover != null && (
@@ -86,7 +92,7 @@ export function ForecastChart({ hours, highlight = [], highlightTone = "accent",
       </svg>
       {hv && (
         <div className="pointer-events-none absolute top-2 w-[172px] rounded-xl border border-border bg-surface-2 p-3 text-sm shadow-lg" style={{ left: tipLeft }}>
-          <div className="num font-bold">{String(hv.hour_local).padStart(2, "0")}:00 – {String((hv.hour_local + 1) % 24).padStart(2, "0")}:00</div>
+          <div className="num font-bold">{clock(hv)} – {endClock(hv)}</div>
           <div className="mt-1.5 flex justify-between gap-3"><span className="text-muted">{t("Forecast")}</span><span className="num font-bold">€{n(hv.forecast, 1)}</span></div>
           <div className="flex justify-between gap-3"><span className="text-muted">{t("Likely range")}</span><span className="num">€{n(hv.p10)}–{n(hv.p90)}</span></div>
           {hv.spike_probability != null && <div className="flex justify-between gap-3"><span className="text-muted">{t("Spike risk")}</span><span className="num">{n(hv.spike_probability * 100)}%</span></div>}
