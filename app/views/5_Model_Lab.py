@@ -22,11 +22,11 @@ if _mc is not None and _mh is not None:
     _nb = _a["MAE"].idxmin()
     _hb = _b["MAE"].idxmin()
     _head = (f"On walk-forward CV the best model is <b>{T.MODEL_LABEL.get(_nb, _nb)}</b> (MAE €{_a.loc[_nb, 'MAE']:.2f}, "
-             f"{100 * _a.loc[_nb, 'skill_vs_best_naive']:+.1f}% vs naive). On the untouched holdout the best is <b>{T.MODEL_LABEL.get(_hb, _hb)}</b> "
+             f"{100 * _a.loc[_nb, 'skill_vs_best_naive']:+.1f}% vs naive). On the final holdout the best is <b>{T.MODEL_LABEL.get(_hb, _hb)}</b> "
              f"(€{_b.loc[_hb, 'MAE']:.2f}, {100 * _b.loc[_hb, 'skill_vs_best_naive']:+.1f}%): the ranking changes when the price regime does.")
 with top:
     T.header("Models", "Model lab",
-             "Every model that was tried, including the ones that lost, evaluated on 25 walk-forward months and an untouched "
+             "Every model that was tried, including the ones that lost, evaluated on 25 walk-forward months and a final "
              "3-month holdout, with Diebold-Mariano significance against the best naive baseline.",
              ["Optuna · 50 trials", "MLflow tracked", "SHAP", "Quantile LightGBM", "PSI drift"], headline=_head)
 
@@ -34,6 +34,28 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["Leaderboard", "Explainability", "Probab
 
 # ================================================================== leaderboard
 with tab1:
+    # ---- what actually runs in production since November 2026 (src/phase1_experiment.py, src/ensemble.py)
+    p1 = T.load_csv("phase1_metrics.csv")
+    if p1 is not None and {"ada4", "lgbm_monthly"} <= set(p1["model"]):
+        _c, _h = p1[p1["split"] == "cv"].set_index("model"), p1[p1["split"] == "holdout"].set_index("model")
+        _names = {"ada4": "Adaptive ensemble of four (in production)", "lear_weekly": "LEAR (per-hour lasso)",
+                  "lgbm_asinh_weekly": "LightGBM on asinh prices, weekly refit", "lgbm_weekly": "LightGBM, weekly refit",
+                  "lgbm_monthly": "LightGBM, monthly refit (previous model)"}
+        _order = [m for m in _names if m in _c.index]
+        T.section("In production: an adaptive ensemble of four models",
+                  "LightGBM, Ridge, a level-adjusted LightGBM and LEAR, blended by each one's error over the last 14 days. "
+                  "It replaced the single model because it passed the rule fixed in advance on the walk-forward months.",
+                  anchor="production")
+        _t = pd.DataFrame({"CV MAE": _c.loc[_order, "MAE"], "CV skill": 100 * _c.loc[_order, "skill_vs_naive"],
+                           "Aug–Oct 2026 MAE": _h["MAE"].reindex(_order), "Aug–Oct 2026 skill": 100 * _h["skill_vs_naive"].reindex(_order)})
+        _t.index = [_names[m] for m in _order]
+        _t.index.name = "Model"
+        T.table(_t, fmt={"CV MAE": "{:.2f}", "CV skill": "{:+.1f}%", "Aug–Oct 2026 MAE": "{:.2f}", "Aug–Oct 2026 skill": "{:+.1f}%"},
+                bars={"CV MAE": T.ACCENT}, highlight=_names["ada4"])
+        T.takeaway(f"The ensemble cut the walk-forward error from €{_c.loc['lgbm_monthly', 'MAE']:.2f} to €{_c.loc['ada4', 'MAE']:.2f}. "
+                   "Aug–Oct 2026 is shown for information only: those months were inspected while the ensemble was built, so the clean "
+                   "test from here on is the live track record.", "warning")
+        T.section("Every single model, on its own", "The earlier comparison of individual models, each refitted monthly.", anchor="single-models")
     mc, mh = T.load_csv("metrics_cv.csv"), T.load_csv("metrics_holdout.csv")
     if mc is None or mh is None:
         T.missing("Model metrics")
