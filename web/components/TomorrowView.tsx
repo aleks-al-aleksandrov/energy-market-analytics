@@ -101,6 +101,7 @@ export function TomorrowView({ forecast, track }: { forecast: Forecast | null; t
       </section>
 
       <section className="card card-pad mt-4 fade-in" aria-label={t("Forecast chart")}>
+        <h2 className="sr-only">{t("Forecast chart")}</h2>
         <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={t("Ask the forecast")}>
           {(Object.keys(answers) as Q[]).map((k) => (
             <button key={k} className="pill" aria-pressed={q === k} onClick={() => setQ(k)}>{answers[k].label}</button>
@@ -130,17 +131,17 @@ export function TomorrowView({ forecast, track }: { forecast: Forecast | null; t
       <section className="mt-4 grid gap-3 md:grid-cols-3">
         <Link href="/battery" className="card card-pad transition-transform hover:-translate-y-0.5">
           <div className="eyebrow">{t("Battery")}</div>
-          <div className="mt-1 text-lg font-bold">{t("Plan a battery for tomorrow")}</div>
+          <h2 className="mt-1 text-lg font-bold">{t("Plan a battery for tomorrow")}</h2>
           <p className="mt-1 text-sm text-text-2">{t("Set size and efficiency, see when to charge and sell, and what it could earn.")}</p>
         </Link>
         <Link href="/track-record" className="card card-pad transition-transform hover:-translate-y-0.5">
           <div className="eyebrow">{t("Track record")}</div>
-          <div className="mt-1 text-lg font-bold">{skill == null ? t("How it has done live") : t("{0}% better than 'same as yesterday', live", n(skill * 100))}</div>
+          <h2 className="mt-1 text-lg font-bold">{skill == null ? t("How it has done live") : t("{0}% better than 'same as yesterday', live", n(skill * 100))}</h2>
           <p className="mt-1 text-sm text-text-2">{t("Every forecast is logged before the auction and scored afterwards. Misses are shown too.")}</p>
         </Link>
         <Link href="/model" className="card card-pad transition-transform hover:-translate-y-0.5">
           <div className="eyebrow">{t("Model")}</div>
-          <div className="mt-1 text-lg font-bold">{t("How it works and where it fails")}</div>
+          <h2 className="mt-1 text-lg font-bold">{t("How it works and where it fails")}</h2>
           <p className="mt-1 text-sm text-text-2">{t("Method, back-test results and the changes that were tested and rejected.")}</p>
         </Link>
       </section>

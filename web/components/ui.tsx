@@ -8,7 +8,7 @@ export function PageHead({ eyebrow, title, lede }: { eyebrow: string; title: str
     <div className="fade-in mb-6 sm:mb-8">
       <div className="eyebrow">{eyebrow}</div>
       <h1 className="mt-1 text-[clamp(1.7rem,4.2vw,2.6rem)] font-extrabold leading-[1.08] tracking-[-.035em]">{title}</h1>
-      {lede && <p className="mt-3 max-w-3xl text-[1.02rem] leading-relaxed text-text-2">{lede}</p>}
+      {lede && <p className="mt-3 max-w-[68ch] text-[1.02rem] leading-relaxed text-text-2">{lede}</p>}
     </div>
   );
 }
@@ -54,6 +54,28 @@ export function useWidth<T extends HTMLElement>(initial = 720): [React.RefObject
     return () => ro.disconnect();
   }, []);
   return [ref, w];
+}
+
+/** Keyboard access for a chart: focus it, then Left/Right (Home/End) move the crosshair; Escape clears it. */
+export function chartKeys(count: number, hover: number | null, setHover: (i: number | null) => void) {
+  return {
+    tabIndex: 0,
+    onFocus: () => { if (hover == null) setHover(0); },
+    onBlur: () => setHover(null),
+    onKeyDown: (e: React.KeyboardEvent) => {
+      const i = hover ?? 0;
+      const next = e.key === "ArrowRight" ? i + 1 : e.key === "ArrowLeft" ? i - 1 : e.key === "Home" ? 0 : e.key === "End" ? count - 1 : null;
+      if (e.key === "Escape") { setHover(null); return; }
+      if (next == null) return;
+      e.preventDefault();
+      setHover(Math.max(0, Math.min(count - 1, next)));
+    },
+  };
+}
+
+/** Announces the value under the crosshair to screen readers without moving focus. */
+export function LiveValue({ text }: { text: string }) {
+  return <div className="sr-only" aria-live="polite" aria-atomic="true">{text}</div>;
 }
 
 /** Every chart offers its numbers as a table. */

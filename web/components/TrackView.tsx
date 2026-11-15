@@ -46,7 +46,9 @@ export function TrackView({ track }: { track: TrackRecord | null }) {
             <tbody>
               {[...days].reverse().map((d) => (
                 <tr key={d.delivery_day}><td>{date(d.delivery_day, { weekday: "short", day: "numeric", month: "short" })}</td><td className="n">{n(d.avg_price)}</td>
-                  <td className="n font-semibold" style={{ color: d.mae_model <= d.mae_naive ? "var(--good)" : "var(--crit)" }}>{n(d.mae_model, 1)}</td>
+                  <td className="n font-semibold" style={{ color: d.mae_model <= d.mae_naive ? "var(--good)" : "var(--crit)" }}>
+                    <span aria-hidden>{d.mae_model <= d.mae_naive ? "✓ " : "✗ "}</span>{n(d.mae_model, 1)}
+                    <span className="sr-only"> {d.mae_model <= d.mae_naive ? t("better than the simple rule") : t("worse than the simple rule")}</span></td>
                   <td className="n">{n(d.mae_naive, 1)}</td><td className="n">{d.bias > 0 ? "+" : ""}{n(d.bias, 1)}</td><td className="n">{n(d.coverage_10_90 * 100)}%</td></tr>
               ))}
             </tbody>

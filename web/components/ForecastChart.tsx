@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { usePrefs } from "@/lib/prefs";
 import type { ForecastHour } from "@/lib/types";
-import { useWidth } from "./ui";
+import { chartKeys, LiveValue, useWidth } from "./ui";
 
 type Props = { hours: ForecastHour[]; highlight?: number[]; highlightTone?: "accent" | "blue" | "crit"; showCrossCheck?: boolean };
 
@@ -59,6 +59,7 @@ export function ForecastChart({ hours, highlight = [], highlightTone = "accent",
     <div ref={ref} className="relative select-none">
       <svg width={width} height={H} role="img"
         aria-label={t("Hourly price forecast for tomorrow with a 10 to 90 percent band. Lowest {0} at {1}:00, highest {2} at {3}:00.", `€${n(hours[g.iMin].forecast)}`, hours[g.iMin].hour_local, `€${n(hours[g.iMax].forecast)}`, hours[g.iMax].hour_local)}
+        {...chartKeys(hours.length, hover, setHover)} className="rounded-lg"
         onMouseMove={(e) => onMove(e.clientX, e.currentTarget.getBoundingClientRect())} onMouseLeave={() => setHover(null)}
         onTouchStart={(e) => onMove(e.touches[0].clientX, e.currentTarget.getBoundingClientRect())}
         onTouchMove={(e) => onMove(e.touches[0].clientX, e.currentTarget.getBoundingClientRect())}>
@@ -90,6 +91,7 @@ export function ForecastChart({ hours, highlight = [], highlightTone = "accent",
           </g>
         )}
       </svg>
+      <LiveValue text={hv ? `${clock(hv)}: €${n(hv.forecast, 1)}, ${t("Likely range")} €${n(hv.p10)}–${n(hv.p90)}` : ""} />
       {hv && (
         <div className="pointer-events-none absolute top-2 w-[172px] rounded-xl border border-border bg-surface-2 p-3 text-sm shadow-lg" style={{ left: tipLeft }}>
           <div className="num font-bold">{clock(hv)} – {endClock(hv)}</div>
@@ -98,6 +100,7 @@ export function ForecastChart({ hours, highlight = [], highlightTone = "accent",
           {hv.spike_probability != null && <div className="flex justify-between gap-3"><span className="text-muted">{t("Spike risk")}</span><span className="num">{n(hv.spike_probability * 100)}%</span></div>}
         </div>
       )}
+      <p className="sr-only">{t("Chart: focus it and use the left and right arrow keys to read each value.")}</p>
       <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[.8rem] text-text-2">
         <span className="inline-flex items-center gap-2"><span aria-hidden className="inline-block h-0.5 w-5 rounded" style={{ background: "var(--series)" }} />{t("Forecast (EUR/MWh)")}</span>
         <span className="inline-flex items-center gap-2"><span aria-hidden className="inline-block h-3 w-5 rounded-sm" style={{ background: "var(--series-soft)" }} />{t("10–90 % likely range")}</span>

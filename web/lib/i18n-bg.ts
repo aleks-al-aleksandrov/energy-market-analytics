@@ -221,6 +221,20 @@ export const BG: Record<string, string> = {
   "Since October 2025 the market clears every 15 minutes, and a quarter sits on average €{0} away from its hour's mean. A second model predicts that shape inside each hour from the ramps in the forecasts and from recent days. It is added on top of the hourly forecast without changing it.": "От октомври 2025 пазарът търгува на всеки 15 минути, а една четвъртинка е средно на €{0} от средната за своя час. Втори модел прогнозира тази форма вътре във всеки час от наклоните в прогнозите и от последните дни. Тя се добавя върху почасовата прогноза, без да я променя.",
   "The 15-minute model has only 13 months of history to learn from, so its results are less settled than the hourly ones.": "15-минутният модел има само 13 месеца история, от която да учи, затова резултатите му са по-малко устойчиви от почасовите.",
 
+  // accessibility and states
+  "Chart: focus it and use the left and right arrow keys to read each value.": "Графика: фокусирайте я и използвайте стрелките наляво и надясно, за да прочетете всяка стойност.",
+  "better than the simple rule": "по-добре от простото правило",
+  "worse than the simple rule": "по-зле от простото правило",
+  "Show": "Покажи",
+  "Hide": "Скрий",
+  "Loading the latest forecast": "Зареждане на последната прогноза",
+  "Something went wrong": "Нещо се обърка",
+  "The page could not load its data. This is usually temporary.": "Страницата не успя да зареди данните си. Обикновено това е временно.",
+  "Try again": "Опитай отново",
+  "Page not found": "Страницата не е намерена",
+  "That address does not exist. The forecast is on the home page.": "Този адрес не съществува. Прогнозата е на началната страница.",
+  "Back to tomorrow's forecast": "Към утрешната прогноза",
+
   // sign-in
   "Sign in": "Вход",
   "Password": "Парола",

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePrefs } from "@/lib/prefs";
-import { useWidth } from "./ui";
+import { chartKeys, LiveValue, useWidth } from "./ui";
 
 function ticks(lo: number, hi: number, count = 5): number[] {
   const span = hi - lo || 1;
@@ -34,7 +34,8 @@ export function LineChart({ labels, series, unit = "€", ariaLabel, every }: { 
   const tipLeft = hover != null ? Math.min(Math.max(x(hover) - 90, 4), width - 190) : 0;
   return (
     <div ref={ref} className="relative select-none">
-      <svg width={width} height={H} role="img" aria-label={ariaLabel}
+      <LiveValue text={hover != null ? `${labels[hover]}: ${series.map((s) => `${s.label} ${s.values[hover] == null ? "–" : unit + n(s.values[hover], 0)}`).join(", ")}` : ""} />
+      <svg width={width} height={H} role="img" aria-label={ariaLabel} {...chartKeys(labels.length, hover, setHover)} className="rounded-lg"
         onMouseMove={(e) => move(e.clientX, e.currentTarget.getBoundingClientRect())} onMouseLeave={() => setHover(null)}
         onTouchStart={(e) => move(e.touches[0].clientX, e.currentTarget.getBoundingClientRect())} onTouchMove={(e) => move(e.touches[0].clientX, e.currentTarget.getBoundingClientRect())}>
         {tk.map((v) => (<g key={v}><line x1={m.l} x2={width - m.r} y1={y(v)} y2={y(v)} stroke="var(--grid)" /><text x={m.l - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--muted)" className="num">{n(v)}</text></g>))}
@@ -70,7 +71,8 @@ export function PairBars({ labels, a, b, ariaLabel }: { labels: string[]; a: { l
   const step = Math.max(1, Math.ceil(labels.length / (width < 520 ? 5 : 10)));
   return (
     <div ref={ref} className="relative select-none">
-      <svg width={width} height={H} role="img" aria-label={ariaLabel} onMouseLeave={() => setHover(null)}>
+      <LiveValue text={hover != null ? `${labels[hover]}: ${a.label} €${n(a.values[hover], 1)}, ${b.label} €${n(b.values[hover], 1)}` : ""} />
+      <svg width={width} height={H} role="img" aria-label={ariaLabel} {...chartKeys(labels.length, hover, setHover)} className="rounded-lg" onMouseLeave={() => setHover(null)}>
         {tk.map((v) => (<g key={v}><line x1={m.l} x2={width - m.r} y1={y(v)} y2={y(v)} stroke="var(--grid)" /><text x={m.l - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--muted)" className="num">{n(v)}</text></g>))}
         {labels.map((l, i) => {
           const cx = m.l + band * (i + 0.5);
@@ -115,7 +117,7 @@ export function ScheduleChart({ hours, prices, net, soc, energy }: { hours: numb
   const socPath = `M${x(0) - band / 2},${socTop + socH}` + soc.map((s, i) => `L${x(i) + band / 2},${(socTop + socH - (s / Math.max(energy, 1e-9)) * socH).toFixed(1)}`).join("") + `L${x(soc.length - 1) + band / 2},${socTop + socH}Z`;
   return (
     <div ref={ref} className="relative select-none">
-      <svg width={width} height={H} role="img" aria-label={t("Battery schedule by hour: charging in cheap hours, selling in expensive hours, with the state of charge below.")} onMouseLeave={() => setHover(null)}>
+      <svg width={width} height={H} role="img" aria-label={t("Battery schedule by hour: charging in cheap hours, selling in expensive hours, with the state of charge below.")} {...chartKeys(hours.length, hover, setHover)} className="rounded-lg" onMouseLeave={() => setHover(null)}>
         {tk.map((v) => (<g key={v}><line x1={m.l} x2={width - m.r} y1={y(v)} y2={y(v)} stroke="var(--grid)" /><text x={m.l - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="var(--muted)" className="num">{n(v)}</text></g>))}
         {net.map((v, i) => {
           const active = Math.abs(v) > 1e-6;
@@ -132,6 +134,7 @@ export function ScheduleChart({ hours, prices, net, soc, energy }: { hours: numb
         <text x={m.l - 8} y={socTop + 10} textAnchor="end" fontSize="10" fill="var(--muted)">{t("Stored")}</text>
         {hours.map((h, i) => (i % (width < 520 ? 4 : 2) === 0 ? <text key={i} x={x(i)} y={H - 9} textAnchor="middle" fontSize="11" fill="var(--muted)" className="num">{String(h).padStart(2, "0")}</text> : null))}
       </svg>
+      <LiveValue text={hover != null ? `${String(hours[hover]).padStart(2, "0")}:00: ${t("Price")} €${n(prices[hover], 1)}, ${net[hover] < -1e-6 ? t("Charge") : net[hover] > 1e-6 ? t("Sell") : t("Idle")} ${n(Math.abs(net[hover]), 2)} MW` : ""} />
       {hover != null && (
         <div className="pointer-events-none absolute top-2 w-[190px] rounded-xl border border-border bg-surface-2 p-3 text-sm shadow-lg" style={{ left: Math.min(Math.max(x(hover) - 95, 4), width - 194) }}>
           <div className="num font-bold">{String(hours[hover]).padStart(2, "0")}:00</div>

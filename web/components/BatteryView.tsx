@@ -53,6 +53,7 @@ export function BatteryView({ forecast }: { forecast: Forecast | null }) {
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
         <section className="card card-pad grid content-start gap-5" aria-label={t("Battery settings")}>
+          <h2 className="text-base font-bold">{t("Battery settings")}</h2>
           <Slider label={t("Power")} value={power} min={0.5} max={20} step={0.5} unit=" MW" onChange={setPower} />
           <Slider label={t("Duration")} value={duration} min={1} max={6} step={0.5} unit=" h" onChange={setDuration} hint={t("Capacity: {0} MWh", n(power * duration, 1))} />
           <Slider label={t("Round-trip efficiency")} value={eff} min={70} max={98} step={1} unit="%" onChange={setEff} />
@@ -67,6 +68,7 @@ export function BatteryView({ forecast }: { forecast: Forecast | null }) {
             <Stat label={t("If prices land at the high edge")} value={`€${n(r.high)}`} sub={t("same schedule, 90% band edge")} />
           </section>
           <section className="card card-pad" aria-label={t("Schedule")}>
+            <h2 className="mb-3 text-base font-bold">{t("Schedule")}</h2>
             <ScheduleChart hours={hours} prices={r.prices} net={r.plan.net} soc={r.plan.soc} energy={power * duration} />
             <TableToggle>
               <table className="data">

@@ -30,7 +30,7 @@
   --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; scroll-padding-top: 76px; }   /* focus and anchors clear the sticky header */
 body {
   background:
     radial-gradient(1100px 480px at 88% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
@@ -72,3 +72,18 @@ table.data td { padding: 10px 12px; border-bottom: 1px solid color-mix(in srgb, 
 table.data td.n, table.data th.n { text-align: right; font-variant-numeric: tabular-nums; }
 table.data tbody tr:hover td { background: var(--surface-2); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* review pass (ui-ux-pro-max checklist) */
+h1, h2 { text-wrap: balance; }
+p { text-wrap: pretty; }
+button, a, [role="button"], input[type="range"] { touch-action: manipulation; }
+svg[tabindex] { outline: none; }
+svg[tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (pointer: coarse) {                       /* fingers: 44px targets with at least 8px between them */
+  .pill { min-height: 44px; }
+  header button, header nav a { min-height: 44px; min-width: 44px; }
+  input[type="range"] { height: 44px; }
+}
+.skeleton { background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%); background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite; border-radius: 12px; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
