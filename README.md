@@ -11,7 +11,7 @@ could earn from them, and a bilingual dashboard (English / Bulgarian, dark / lig
 [![next-day-forecast](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml/badge.svg)](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml)
 ![python](https://img.shields.io/badge/python-3.12-blue)
 ![streamlit](https://img.shields.io/badge/dashboard-Streamlit-ff4b4b)
-![tests](https://img.shields.io/badge/tests-116%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-118%20passing-brightgreen)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 **[Open the live dashboard](https://energy-market-analytics-1.streamlit.app/)** (sign-in required, see [Sign-in](#sign-in)) ·
@@ -43,7 +43,7 @@ tests, experiment tracking, drift monitoring).
 | **Battery value** | About **EUR 100k per MW-year** with a forecast-guided 1 MW / 2 MWh battery, **88 %** of perfect foresight (naive rule: 83 %) |
 | **Honest caveat** | Aug to Oct 2026 was a price surge beyond the training range. The old model was only +2.7 % better than naive there; the new ensemble is +22 %, but those months were inspected while building it, so they are **no longer an untouched test**. The clean evidence is the live track record, which is still only days long |
 | **What did not help** | Fuel and carbon prices, interconnector capacities, plant outages, and bias-corrected battery scheduling. German prices plus neighbours' forecasts helped in normal months but hurt badly in the surge, so they are held back |
-| **How it is checked** | 116 automated tests (leakage tests on the feature builder and on every new component, evaluation maths, battery physics, API, every dashboard page), CI on every push for the Python code and the web app, data validation that stops the pipeline on bad inputs, and an issue opened automatically if the daily forecast fails |
+| **How it is checked** | 118 automated tests (leakage tests on the feature builder and on every new component, evaluation maths, battery physics, API, every dashboard page), CI on every push for the Python code and the web app, data validation that stops the pipeline on bad inputs, and an issue opened automatically if the daily forecast fails |
 
 Details, tables and the reasoning behind each number are in [Headline results](#headline-results).
 
@@ -69,7 +69,8 @@ only way to get at the numbers. Every change below was accepted or rejected by a
 * **Serving layer** (`src/serving.py`): one module builds every payload. A FastAPI service (`api/main.py`) and a static JSON
   export (`reports/api/v1/`, refreshed daily) return the same numbers.
 * **Web app** (`web/`, Next.js): a fast bilingual front end with an interactive forecast chart and an in-browser battery planner.
-  The Streamlit dashboard stays as the analyst view.
+  The Streamlit dashboard is the hosted app; its Forecast page shows the 15-minute forecast and the day's model blend, and its
+  Model Lab shows the ensemble against the previous model. The web app is optional and not required for anything.
 * **Quarter-hour forecasts** (`src/quarter_hour.py`). The market has cleared in 15-minute products since October 2025, and a
   quarter sits on average about EUR 10.6 from its hour's mean. A second LightGBM predicts that within-hour shape and is added on
   top of the hourly forecast without changing it. Quarter-hour error on the CV months: 24.3 against 25.7 for a flat hour

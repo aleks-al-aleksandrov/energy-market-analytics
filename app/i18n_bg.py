@@ -2,6 +2,19 @@
 
 Generated once from the strings the dashboard actually renders; edit values freely, keep the {} count and any HTML tags."""
 BG: dict[str, str] = {
+    'Inside the hour, prices move by up to €{} (at {}:00)': 'Вътре в часа цените се движат с до €{0} (в {1}:00)',
+    'The market clears every 15 minutes. A second model adds the shape inside each hour; the four quarters still average to the hourly forecast': 'Пазарът търгува на всеки 15 минути. Втори модел добавя формата вътре във всеки час; четирите четвъртинки пак дават средно почасовата прогноза',
+    'Quarter-hour error on the validation months: 24.3 EUR/MWh against 25.7 when every quarter is set to the hourly forecast.': 'Грешка по четвъртинки през валидационните месеци: 24.3 EUR/MWh срещу 25.7, когато всяка четвъртинка е равна на почасовата прогноза.',
+    '15-minute forecast': '15-минутна прогноза',
+    'Hourly forecast': 'Почасова прогноза',
+    'Download the 15-minute forecast (CSV)': 'Изтегли 15-минутната прогноза (CSV)',
+    'Tomorrow leans most on {} ({}%)': 'Утре най-голяма тежест има {0} ({1}%)',
+    'Share of each model in the forecast, set by its error over the last 14 published days': 'Дял на всеки модел в прогнозата, определен от грешката му през последните 14 публикувани дни',
+    'When prices leave the range the tree models were trained on, the models that can extrapolate take the weight automatically.': 'Когато цените излязат от диапазона, върху който са обучени дървесните модели, тежестта автоматично отива при моделите, които могат да екстраполират.',
+    'share of the forecast (%)': 'дял от прогнозата (%)',
+    'time (local)': 'час (местно време)',
+    'hourly': 'почасова',
+    '15-minute': '15-минутна',
     'In production: an adaptive ensemble of four models': 'В употреба: адаптивна комбинация от четири модела',
     "LightGBM, Ridge, a level-adjusted LightGBM and LEAR, blended by each one's error over the last 14 days. It replaced the single model because it passed the rule fixed in advance on the walk-forward months.": 'LightGBM, Ridge, LightGBM с корекция на ниво и LEAR, комбинирани според грешката на всеки през последните 14 дни. Комбинацията замени единичния модел, защото премина предварително зададеното правило върху месеците с придвижване напред.',
     'The ensemble cut the walk-forward error from €{} to €{}. Aug–Oct 2026 is shown for information only: those months were inspected while the ensemble was built, so the clean test from here on is the live track record.': 'Комбинацията намали грешката при придвижване напред от €{0} на €{1}. Август–октомври 2026 е показан само за информация: тези месеци са разглеждани при изграждането на комбинацията, затова чистият тест оттук нататък са резултатите на живо.',

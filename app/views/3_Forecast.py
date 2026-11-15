@@ -81,6 +81,51 @@ if nd is not None and len(nd):
         fig.update_xaxes(title="hour (local)", row=2, col=1)
         T.chart(fig, 430, legend=False)
     T.download(nd.set_index("time_local")[[c for c in nd.columns if c.startswith(("forecast", "p10", "p90", "spike"))]], "forecast-next-day", "Download tomorrow's forecast (CSV)", key="dl_nd")
+    # --- 15-minute forecast and today's model blend (both exist from the first retrain with the new pipeline) -----------------------
+    _day = str(nd["delivery_day"].iloc[0])
+    q15 = T.load_csv("forecast_next_day_15min.csv")
+    ens = T.load_json("ensemble_live.json")
+    has_q = q15 is not None and len(q15) and str(q15["delivery_day"].iloc[0]) == _day
+    has_e = bool(ens) and ens.get("delivery_day") == _day and ens.get("weights")
+    if has_q or has_e:
+        cq, ce = st.columns([1.7, 1]) if has_q and has_e else (st.container(), st.container())
+    if has_q:
+        qt = q15["time_local"].str[-5:]
+        hour_of = q15["time_local"].str[:13]
+        swing = q15.groupby(hour_of.to_numpy())["forecast_eur_mwh"].agg(lambda v: v.max() - v.min())
+        big = swing.idxmax()
+        with cq, T.card(f"Inside the hour, prices move by up to €{swing.max():.0f} (at {big[-2:]}:00)",
+                        "The market clears every 15 minutes. A second model adds the shape inside each hour; the four quarters still average to the hourly forecast",
+                        T.legend_html([("15-minute forecast", T.ACCENT), ("Hourly forecast", T.NEUTRAL), ("10–90 % band", T.rgba(T.ACCENT, .4))]),
+                        help="Quarter-hour error on the validation months: 24.3 EUR/MWh against 25.7 when every quarter is set to the hourly forecast."):
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=qt, y=q15["p90_eur_mwh"], line=dict(width=0), showlegend=False, hoverinfo="skip"))
+            fig.add_trace(go.Scatter(x=qt, y=q15["p10_eur_mwh"], fill="tonexty", fillcolor=T.rgba(T.ACCENT, .16), line=dict(width=0), name="P10–P90",
+                                     customdata=q15["p90_eur_mwh"], hovertemplate="band %{y:.0f} – %{customdata:.0f}<extra></extra>"))
+            hourly_step = (q15["forecast_eur_mwh"] - q15["shape_eur_mwh"]) if "shape_eur_mwh" in q15 else q15.groupby(hour_of.to_numpy())["forecast_eur_mwh"].transform("mean")
+            fig.add_trace(go.Scatter(x=qt, y=hourly_step, name="hourly", line=dict(color=T.NEUTRAL, width=1.6, shape="hv"),
+                                     hovertemplate="hourly %{y:.1f}<extra></extra>"))
+            fig.add_trace(go.Scatter(x=qt, y=q15["forecast_eur_mwh"], name="15-minute", line=dict(color=T.ACCENT, width=2.2),
+                                     hovertemplate="15-minute <b>%{y:.1f}</b><extra></extra>"))
+            fig.update_yaxes(title="EUR/MWh")
+            fig.update_xaxes(title="time (local)", dtick=8)
+            T.chart(fig, 360, legend=False)
+        with cq:
+            T.download(q15.set_index("time_local")[["forecast_eur_mwh", "p10_eur_mwh", "p90_eur_mwh"]], "forecast-next-day-15min",
+                       "Download the 15-minute forecast (CSV)", key="dl_q15")
+    if has_e:
+        _names = {"lightgbm": "LightGBM", "ridge": "Ridge", "level": "LightGBM · level-adj.", "lear": "LEAR"}
+        w = pd.Series(ens["weights"]).sort_values()
+        top = w.idxmax()
+        with ce, T.card(f"Tomorrow leans most on {_names.get(top, top)} ({100 * w.max():.0f}%)",
+                        "Share of each model in the forecast, set by its error over the last 14 published days",
+                        help="When prices leave the range the tree models were trained on, the models that can extrapolate take the weight automatically."):
+            fig = go.Figure(go.Bar(x=100 * w.values, y=[_names.get(i, i) for i in w.index], orientation="h",
+                                   marker=dict(color=[T.ACCENT if i == top else T.NEUTRAL for i in w.index], cornerradius=4),
+                                   text=[f"{100 * v:.0f}%" for v in w.values], textposition="outside", cliponaxis=False,
+                                   hovertemplate="%{y}: <b>%{x:.0f}%</b><extra></extra>"))
+            fig.update_xaxes(title="share of the forecast (%)", range=[0, max(60, 100 * w.max() * 1.25)])
+            T.chart(fig, 360 if has_q else 260, legend=False)
     if has_actual:
         T.takeaway(f"The forecast was <b>€{abs(err.mean()):.0f}/MWh {'below' if err.mean() > 0 else 'above'}</b> the published price on average. Under-forecasting in the autumn-2026 "
                    "price surge is the known weakness: trees cannot extrapolate above the price levels seen in training.", "warning")
