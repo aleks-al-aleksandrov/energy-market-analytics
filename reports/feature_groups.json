@@ -53,6 +53,20 @@
     "ntc_import_total",
     "ntc_export_total"
   ],
+  "regional": [
+    "price_DE_LU_lag24",
+    "price_DE_LU_d1_mean",
+    "spread_BG_DE_LU_lag24",
+    "reg_res_fc_RO",
+    "reg_ren_share_RO",
+    "reg_res_fc_GR",
+    "reg_ren_share_GR",
+    "reg_res_fc_HU",
+    "reg_ren_share_HU",
+    "reg_res_fc_DE_LU",
+    "reg_ren_share_DE_LU",
+    "reg_res_fc_see"
+  ],
   "flows": [
     "net_import_d2_mean"
   ],
