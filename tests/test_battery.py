@@ -1,5 +1,6 @@
 """Physical constraints of the battery arbitrage optimiser (src/battery.py)."""
 import numpy as np
+import pytest
 import pandas as pd
 
 from src import battery as B
@@ -56,3 +57,19 @@ def test_higher_efficiency_never_earns_less():
     prices = 100 + 50 * np.sin(np.arange(24) / 24 * 2 * np.pi)
     rev = lambda eff: float(np.sum(B.schedule_day(prices, B.Battery(efficiency=eff)) * prices))
     assert rev(0.95) >= rev(0.85) >= rev(0.75) - 1e-9
+
+
+def test_quarter_hour_schedule_respects_limits_and_beats_hourly_trading():
+    """15-minute products: energy per quarter is capped at power x 0.25, and the quarter optimum is never worse than an
+    hourly schedule held flat across its quarters (that schedule is one of the quarter schedules the LP can choose)."""
+    rng = np.random.default_rng(3)
+    hourly = 100 + 60 * np.sin(np.linspace(0, 2 * np.pi, 24))
+    q = np.repeat(hourly, 4) + np.tile([-15.0, -5.0, 5.0, 15.0], 24) + rng.normal(0, 3, 96)
+    b = B.Battery(power_mw=1.0, duration_h=2.0)
+    net_q = B.schedule_day(q, b, step_h=0.25)
+    assert np.abs(net_q).max() <= 0.25 + 1e-9                                   # 1 MW for 15 minutes = 0.25 MWh
+    assert np.maximum(-net_q, 0).sum() <= b.energy_mwh / np.sqrt(b.efficiency) + 1e-6
+    hourly_mean = q.reshape(24, 4).mean(axis=1)
+    flat = np.repeat(B.schedule_day(hourly_mean, b), 4) / 4
+    assert np.sum(flat * q) == pytest.approx(np.sum(B.schedule_day(hourly_mean, b) * hourly_mean))   # flat schedule settles at the hourly mean
+    assert np.sum(net_q * q) >= np.sum(flat * q) - 1e-6

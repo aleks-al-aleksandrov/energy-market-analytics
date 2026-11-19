@@ -136,6 +136,8 @@ def main() -> None:
             q15 = quarter_hour.forecast_quarters(joblib.load(qb), out[["forecast_eur_mwh", "p10_eur_mwh", "p90_eur_mwh"]], f)
             q15["delivery_day"] = str(day.date())
             q15.round(3).to_csv(q15_path, index_label="timestamp_utc")
+            from src import live_scores
+            live_scores.append_quarters(q15, pd.Timestamp.now(tz="UTC"))
         elif q15_path.exists():
             q15_path.unlink()             # never leave yesterday's quarters next to today's hours
     except Exception as exc:
@@ -144,6 +146,11 @@ def main() -> None:
     from src import track_record
     track_record.append_forecast(out, pd.Timestamp.now(tz="UTC"))     # live track record (only pre-gate-closure runs count)
     track_record.update()
+    try:                                  # per-model and 15-minute live scores (reports/live_detail.csv)
+        from src import live_scores
+        live_scores.update()
+    except Exception as exc:
+        log.warning("live detail scores skipped: %s", str(exc)[:120])
     try:                                  # point-in-time outage snapshot -> a leak-free outage history accumulates from now on
         from src import outages
         outages.record_point_in_time(day)

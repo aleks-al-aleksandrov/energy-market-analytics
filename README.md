@@ -11,7 +11,7 @@ could earn from them, and a bilingual dashboard (English / Bulgarian, dark / lig
 [![next-day-forecast](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml/badge.svg)](https://github.com/aleks-al-aleksandrov/energy-market-analytics/actions/workflows/next_day_forecast.yml)
 ![python](https://img.shields.io/badge/python-3.12-blue)
 ![streamlit](https://img.shields.io/badge/dashboard-Streamlit-ff4b4b)
-![tests](https://img.shields.io/badge/tests-118%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-122%20passing-brightgreen)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 **[Open the live dashboard](https://energy-market-analytics-1.streamlit.app/)** (sign-in required, see [Sign-in](#sign-in)) ·
@@ -43,7 +43,7 @@ tests, experiment tracking, drift monitoring).
 | **Battery value** | About **EUR 100k per MW-year** with a forecast-guided 1 MW / 2 MWh battery, **88 %** of perfect foresight (naive rule: 83 %) |
 | **Honest caveat** | Aug to Oct 2026 was a price surge beyond the training range. The old model was only +2.7 % better than naive there; the new ensemble is +22 %, but those months were inspected while building it, so they are **no longer an untouched test**. The clean evidence is the live track record, which is still only days long |
 | **What did not help** | Fuel and carbon prices, interconnector capacities, plant outages, and bias-corrected battery scheduling. German prices plus neighbours' forecasts helped in normal months but hurt badly in the surge, so they are held back |
-| **How it is checked** | 118 automated tests (leakage tests on the feature builder and on every new component, evaluation maths, battery physics, API, every dashboard page), CI on every push for the Python code and the web app, data validation that stops the pipeline on bad inputs, and an issue opened automatically if the daily forecast fails |
+| **How it is checked** | 122 automated tests (leakage tests on the feature builder and on every new component, evaluation maths, battery physics, API, every dashboard page), CI on every push for the Python code and the web app, data validation that stops the pipeline on bad inputs, and an issue opened automatically if the daily forecast fails |
 
 Details, tables and the reasoning behind each number are in [Headline results](#headline-results).
 
@@ -66,6 +66,14 @@ only way to get at the numbers. Every change below was accepted or rejected by a
 * **Adaptive conformal band** (`src/calibrate.py`). Each side of the band widens after it misses and narrows when it is too
   cautious, every day, not only at the weekly retrain. In the first live week the old band held the price in only 48 % of hours;
   this is the fix for that.
+* **Battery on 15-minute prices** (`src/battery_quarter.py`). Same 1 MW / 2 MWh battery, every schedule settled at quarter-hour
+  prices, January to July 2026: perfect foresight earns 104k per MW-year trading quarters against 94k trading hours, so the
+  15-minute market is worth about 10 % more. Scheduling on the forecast plus its within-hour shape earns 82.8k against 79.3k for
+  the hourly schedule (EUR 9.5 per day, 95 % interval 7.7 to 12.0), so quarter scheduling is adopted. These figures cover 2026
+  only; the 100k headline is the 2024-2026 hourly back-test, a different period.
+* **Live scores per model and per quarter** (`src/live_scores.py`). Every ensemble member and the 15-minute forecast are scored
+  against published prices each day, next to the hourly track record. The 15-minute log was backfilled from the forecasts
+  committed before gate closure since 16 November 2026.
 * **Serving layer** (`src/serving.py`): one module builds every payload. A FastAPI service (`api/main.py`) and a static JSON
   export (`reports/api/v1/`, refreshed daily) return the same numbers.
 * **Web app** (`web/`, Next.js): a fast bilingual front end with an interactive forecast chart and an in-browser battery planner.
@@ -586,6 +594,8 @@ src/
   regional_experiment.py  German prices and neighbours' forecasts: tested, held back
   battery_uncertainty.py  bias-corrected battery scheduling: tested, rejected
   quarter_hour.py      15-minute forecasts: within-hour shape on top of the hourly forecast (experiment + production)
+  battery_quarter.py   battery value with 15-minute products (quarter vs hourly scheduling, pre-set rule)
+  live_scores.py       live scores of each ensemble member and of the 15-minute forecast
   serving.py           builds every JSON payload from reports/ (forecast, track record, metrics, market, battery plan, status)
   export_api.py        writes the payloads to reports/api/v1/ for static hosting
 api/                   FastAPI service over the same payloads (optional API key; refuses to start open in hosted mode)

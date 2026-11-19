@@ -70,7 +70,7 @@ with top:
              headline=(f"A {power:g} MW / {power * dur:g} MWh battery earns <b>€{s.loc['forecast_lightgbm', 'eur_per_mw_year'] / 1000:,.0f}k per MW-year</b> on the LightGBM "
                        f"schedule, <b>{_pl:.0f}%</b> of the perfect-foresight value; the naive rule gets {_pn:.0f}%."))
 
-T.toc([("day", "One day"), ("monthly", "Monthly & design"), ("risk", "Monte Carlo risk"), ("costs", "Costs & investment"), ("reserve", "Reserve")])
+T.toc([("quarter", "15-minute trading"), ("day", "One day"), ("monthly", "Monthly & design"), ("risk", "Monte Carlo risk"), ("costs", "Costs & investment"), ("reserve", "Reserve")])
 
 k = st.columns(len(s))
 for col, name in zip(k, strategies):
@@ -107,6 +107,42 @@ T.takeaway(f"A {power:g} MW / {power * dur:g} MWh battery at {eff:.0%} efficienc
            f"/MW-yr</b> with perfect foresight. The LightGBM schedule captures <b>{s.loc['forecast_lightgbm', 'pct_of_perfect']:.0f}%</b>, "
            f"the naive rule <b>{s.loc['naive_yesterday', 'pct_of_perfect']:.0f}%</b>: the forecast is worth <b>€{gain:,.0f} per MW-year</b>.",
            "action")
+
+# --- 15-minute trading (src/battery_quarter.py) ---------------------------------------------------------
+bq, bqc = T.load_csv("battery_quarter.csv"), T.load_json("battery_quarter_choice.json")
+if bq is not None and bqc:
+    T.section("15-minute trading", anchor="quarter",
+              subtitle="Since October 2025 the market settles every quarter hour. Same battery (1 MW / 2 MWh / 90 %), every schedule settled at quarter-hour prices")
+    _cv = bq[bq["split"] == "cv"].set_index("strategy")
+    _ho = bq[bq["split"] == "holdout"].set_index("strategy")
+    _lab = {"perfect_quarter": "Perfect foresight · quarters", "perfect_hourly": "Perfect foresight · hours",
+            "forecast_quarter": "Forecast + shape · quarters", "forecast_hourly": "Forecast · hours", "naive_quarter": "Yesterday's quarters"}
+    _order = [k for k in _lab if k in _cv.index]
+    _gain_yr = 365 * bqc["gain_eur_per_day"]
+    c1, c2 = st.columns([1.5, 1])
+    with c1, T.card(f"Trading quarters instead of hours adds about €{_gain_yr / 1000:,.1f}k per MW-year with the forecast",
+                    f"EUR per MW-year over {int(_cv.loc['forecast_quarter', 'days'])} days of January–July 2026 · % of the quarter-hour ceiling beside the bar",
+                    help="Hourly schedules are held flat across their four quarters. The 100k headline above uses hourly prices over 2024-2026, a different period, so the levels differ."):
+        vals = [_cv.loc[k, "eur_per_mw_year"] for k in _order]
+        fig = go.Figure(go.Bar(y=[_lab[k] for k in _order], x=vals, orientation="h",
+                               marker=dict(color=[T.ACCENT if k == "forecast_quarter" else T.NEUTRAL for k in _order], cornerradius=4),
+                               text=[f"€{v / 1000:,.1f}k · {_cv.loc[k, 'pct_of_perfect_quarter']:.0f}%" for k, v in zip(_order, vals)],
+                               textposition="outside", cliponaxis=False, textfont=dict(family=T.MONO, color=T.TEXT, size=12),
+                               hovertemplate="%{y}: <b>€%{x:,.0f}</b> / MW-yr<extra></extra>"))
+        fig.update_yaxes(autorange="reversed")
+        fig.update_xaxes(title="EUR / MW-year", range=[0, max(vals) * 1.3])
+        T.chart(fig, 330, legend=False)
+    with c2:
+        k = st.columns(2)
+        T.kpi(k[0], "Ceiling: quarters vs hours", f"+{100 * (_cv.loc['perfect_quarter', 'eur_per_mw_year'] / _cv.loc['perfect_hourly', 'eur_per_mw_year'] - 1):.0f}%",
+              "perfect foresight", accent=True)
+        T.kpi(k[1], "Gain with the forecast", f"€{bqc['gain_eur_per_day']:.1f}/day", f"95% interval €{bqc['ci'][0]:.1f}–{bqc['ci'][1]:.1f}")
+        if "forecast_quarter" in _ho.index:
+            T.takeaway(f"The gain held in the Aug–Oct 2026 price surge: <b>€{_ho.loc['forecast_quarter', 'gain_vs_forecast_hourly_eur_per_day']:.1f} per day</b>, "
+                       "smaller than in calmer months. Those months are shown for information only.", "insight")
+    _extra = _cv.loc["perfect_quarter", "eur_per_mw_year"] - _cv.loc["perfect_hourly", "eur_per_mw_year"]
+    T.takeaway("Quarter-hour prices swing most in the morning and evening ramps, so a battery that can switch within the hour earns more. "
+               f"The forecast's within-hour shape captures <b>{100 * _gain_yr / max(_extra, 1e-9):.0f}%</b> of that extra value; the rest needs a sharper shape forecast.", "action")
 
 # --- one day in detail ------------------------------------------------------------------------------
 T.section("One day in detail", anchor="day", subtitle="How the battery is dispatched, and what each schedule earns")

@@ -261,6 +261,37 @@ if tr is not None and len(tr):
         fig.update_layout(barmode="group")
         fig.update_yaxes(title="MAE (EUR/MWh)")
         T.chart(fig, 300, legend=False)
+    # --- live score of each ensemble member and of the 15-minute forecast (src/live_scores.py) ---------------------------
+    ld = T.load_csv("live_detail.csv")
+    if ld is not None and len(ld):
+        _mn = {"mae_lightgbm": "LightGBM", "mae_ridge": "Ridge", "mae_level": "LightGBM · level-adj.", "mae_lear": "LEAR"}
+        _mc = [c for c in _mn if c in ld and ld[c].notna().any()]
+        has_qd = "mae_quarter" in ld and ld["mae_quarter"].notna().any()
+        c1, c2 = st.columns([1.4, 1]) if _mc and has_qd else (st.container(), st.container())
+        if _mc:
+            mm = ld[_mc].mean().sort_values()
+            best_m = mm.index[0]
+            nd_m = int(ld[_mc].notna().all(axis=1).sum())
+            with c1, T.card(f"Live so far, {_mn[best_m]} has been closest (€{mm.iloc[0]:.1f}); days scored: {nd_m}",
+                            "Average miss of each model in the ensemble on the live days, EUR/MWh · lower is better",
+                            help="The ensemble weights follow these errors over the last 14 days. A handful of days says little about which model is better."):
+                fig = go.Figure(go.Bar(x=mm.values, y=[_mn[c] for c in mm.index], orientation="h",
+                                       marker=dict(color=[T.ACCENT if c == best_m else T.NEUTRAL for c in mm.index], cornerradius=4),
+                                       text=[f"€{v:.1f}" for v in mm.values], textposition="outside", cliponaxis=False,
+                                       hovertemplate="%{y}: <b>€%{x:.1f}</b><extra></extra>"))
+                fig.update_yaxes(autorange="reversed")
+                fig.update_xaxes(title="MAE (EUR/MWh)", range=[0, mm.max() * 1.3])
+                T.chart(fig, 260, legend=False)
+        if has_qd:
+            qd = ld.dropna(subset=["mae_quarter", "mae_quarter_flat"])
+            gain = qd["mae_quarter_flat"].mean() - qd["mae_quarter"].mean()
+            with c2:
+                k = st.columns(2)
+                T.kpi(k[0], "15-minute live MAE", T.fmt_eur(qd["mae_quarter"].mean()), f"days scored: {len(qd)}", accent=True)
+                T.kpi(k[1], "Without the shape", T.fmt_eur(qd["mae_quarter_flat"].mean()), "every quarter = its hour",
+                      delta=T.delta_chip(-gain, " EUR/MWh", good_when_up=False))
+                T.takeaway(f"Live, the within-hour shape has lowered the 15-minute error by €{gain:.1f}/MWh. In the back-test it lowered it by €1.4." if gain > 0
+                           else f"Live, the within-hour shape has not lowered the 15-minute error yet (€{-gain:.1f}/MWh worse). In the back-test it lowered it by €1.4.", "insight")
 else:
     n_log = 0 if fl is None else len(fl)
     st.markdown(f"<div class='empty' role='status'><div class='empty-icon' aria-hidden='true'>◌</div><div><b>The live track record is still empty.</b><br>"

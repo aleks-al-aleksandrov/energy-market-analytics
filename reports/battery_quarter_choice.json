@@ -1,0 +1,15 @@
+{
+  "schedule_on": "quarter",
+  "cv_days": 212,
+  "forecast_quarter_eur_per_mw_year": 82830.11119608405,
+  "forecast_hourly_eur_per_mw_year": 79345.2597565863,
+  "perfect_quarter_eur_per_mw_year": 103994.45959862534,
+  "perfect_hourly_eur_per_mw_year": 94431.61315622802,
+  "gain_eur_per_day": 9.547538190404813,
+  "ci": [
+    7.651763704649953,
+    11.992366113986982
+  ],
+  "rule": "quarter scheduling adopted iff it earns more than hourly scheduling on the CV months and the 95 % block-bootstrap interval of the daily gain is above zero; holdout reported only",
+  "months_note": "15-minute prices exist from 2025-10; CV months 2026-01..2026-07"
+}

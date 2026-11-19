@@ -110,12 +110,19 @@ def answer(q: str, nd: pd.DataFrame) -> dict:
         if not ch:
             return dict(hi=set(), hi2=set(), text="The spread is too small to cover round-trip losses, so a 1 MW / 2 MWh battery would stay idle tomorrow.")
         val = float((net * f).sum())
+        q15 = T.load_csv("forecast_next_day_15min.csv")
+        qtxt = ""
+        if q15 is not None and len(q15) and str(q15["delivery_day"].iloc[0])[:10] == str(nd["delivery_day"].iloc[0])[:10]:
+            qp = q15["forecast_eur_mwh"].to_numpy(dtype=float)
+            qval = float((B.schedule_day(qp, B.Battery(), step_h=0.25) * qp).sum())
+            if qval > val + 0.5:
+                qtxt = f" Trading the 15-minute products instead would earn about <b>{T.fmt_eur(qval, 0)}</b>."
         mc = (T.load_json("mc_summary.json") or {}).get("next_day")
         rng = (f" A Monte Carlo of past forecast errors gives a realistic range of <b>{T.fmt_eur(mc['p10'], 0)}–{T.fmt_eur(mc['p90'], 0)}</b>."
                if mc and str(mc.get("delivery_day", ""))[:10] == str(nd["delivery_day"].iloc[0])[:10] else "")
         return dict(hi={int(k) for k in np.where(net < -1e-6)[0]}, hi2={int(k) for k in np.where(net > 1e-6)[0]},
                     text=(f"A 1 MW / 2 MWh battery would charge at <b>{_ranges(ch)}</b> and discharge at <b>{_ranges(dis)}</b>, "
-                          f"earning about <b>{T.fmt_eur(val, 0)}</b> at the forecast prices.{rng}"))
+                          f"earning about <b>{T.fmt_eur(val, 0)}</b> at the forecast prices.{qtxt}{rng}"))
     sc = T.load_csv("skill_confidence.csv")
     if sc is not None:
         g = sc[sc["variant"] == "lightgbm"].set_index("split")

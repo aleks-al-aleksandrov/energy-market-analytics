@@ -130,6 +130,16 @@ def forecast_latest() -> dict:
 
 
 # ---------------------------------------------------------------------------------------------- live track record
+def _live_detail() -> dict | None:
+    """Per-model and 15-minute live scores (src/live_scores.py)."""
+    p = _r("live_detail.csv")
+    if not p.exists():
+        return None
+    from src import live_scores
+    d = pd.read_csv(p)
+    return dict(days=_records(d), summary=_clean(live_scores.summary(d)))
+
+
 def track_record() -> dict:
     p = _r("live_track_record.csv")
     if not p.exists():
@@ -146,6 +156,7 @@ def track_record() -> dict:
         totals=dict(mae_model=mae_m, mae_naive=mae_n, skill_vs_naive=1 - mae_m / mae_n if mae_n else None,
                     coverage_10_90=float(np.average(t["coverage_10_90"], weights=w)) if "coverage_10_90" in t else None,
                     days_model_beat_naive=int((t["mae_model"] < t["mae_naive"]).sum())),
+        detail=_live_detail(),
         note="Only forecasts generated before gate closure (12:00 CET on D-1) count. Too few days prove nothing: read the totals with the day count."))
 
 
@@ -175,7 +186,10 @@ def model_metrics() -> dict:
     p = _r("quarter_metrics.csv")
     if p.exists():
         out["quarter_hour"] = _records(pd.read_csv(p))
-    for name in ("battery_uncertainty_choice.json", "ensemble_live.json", "quarter_choice.json"):
+    p = _r("battery_quarter.csv")
+    if p.exists():
+        out["battery_quarter"] = _records(pd.read_csv(p))
+    for name in ("battery_uncertainty_choice.json", "ensemble_live.json", "quarter_choice.json", "battery_quarter_choice.json"):
         q = _r(name)
         if q.exists():
             out[name.replace(".json", "")] = _clean(json.loads(q.read_text()))
@@ -211,6 +225,23 @@ def market_recent(days: int = 30, zones: list[str] | None = None) -> dict:
 
 
 # ---------------------------------------------------------------------------------------------- battery plan
+def _quarter_plan(b: B.Battery, delivery_day: str) -> dict | None:
+    """Value of tomorrow's schedule when the battery trades the 15-minute products (None without a quarter forecast)."""
+    p = _r("forecast_next_day_15min.csv")
+    if not p.exists():
+        return None
+    q = pd.read_csv(p)
+    if q.empty or str(q["delivery_day"].iloc[0]) != delivery_day:
+        return None
+    price = q["forecast_eur_mwh"].to_numpy(dtype=float)
+    net = B.schedule_day(price, b, step_h=0.25)
+    deg = b.degradation_eur_mwh * B.throughput(net)
+    return dict(expected_revenue_eur=float(np.sum(net * price)) - deg,
+                revenue_if_prices_at_p10_eur=float(np.sum(net * q["p10_eur_mwh"].to_numpy(dtype=float))) - deg,
+                revenue_if_prices_at_p90_eur=float(np.sum(net * q["p90_eur_mwh"].to_numpy(dtype=float))) - deg,
+                schedule=[dict(time_local=l, price=x, net_mwh=y) for l, x, y in zip(q["time_local"].astype(str), price, net)])
+
+
 def battery_plan(power_mw: float = 1.0, duration_h: float = 2.0, efficiency: float = 0.90, cycles_per_day: float = 1.0,
                  degradation_eur_mwh: float = 0.0) -> dict:
     """Optimal schedule for tomorrow on the forecast, with the revenue it would earn at the forecast and at each band edge."""
@@ -239,6 +270,7 @@ def battery_plan(power_mw: float = 1.0, duration_h: float = 2.0, efficiency: flo
         revenue_if_prices_at_p10_eur=float(np.sum(net * f["p10_eur_mwh"].to_numpy(dtype=float))) - deg,
         revenue_if_prices_at_p90_eur=float(np.sum(net * f["p90_eur_mwh"].to_numpy(dtype=float))) - deg,
         charged_mwh=float(np.maximum(-net, 0).sum()), discharged_mwh=float(np.maximum(net, 0).sum()),
+        quarter_hour=_quarter_plan(b, str(f["delivery_day"].iloc[0])),
         schedule=rows,
         assumptions="Day-ahead arbitrage only, price-taker, starts and ends the day empty. Revenue at forecast prices is "
                     "optimistic: realised revenue is on average lower because a schedule sells where the forecast is highest."))

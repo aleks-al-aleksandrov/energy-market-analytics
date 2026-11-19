@@ -34,8 +34,12 @@ class Battery:
         return self.power_mw * self.duration_h
 
 
-def schedule_day(prices: np.ndarray, b: Battery) -> np.ndarray:
-    """Return net discharge per hour (MW, + = sell, - = buy) optimal for `prices`."""
+def schedule_day(prices: np.ndarray, b: Battery, step_h: float = 1.0) -> np.ndarray:
+    """Return net energy discharged per step (MWh, + = sell, - = buy) optimal for `prices` (EUR/MWh).
+
+    With hourly steps (`step_h` = 1, the default) MWh per step equals MW. For 15-minute products use `step_h` = 0.25: the
+    battery can then move at most power x 0.25 MWh per step, and revenue is still sum(net x price).
+    """
     n = len(prices)
     if n == 0 or np.isnan(prices).any():
         return np.zeros(n)
@@ -49,7 +53,7 @@ def schedule_day(prices: np.ndarray, b: Battery) -> np.ndarray:
     b_ub = [np.full(n, b.energy_mwh), np.zeros(n), [b.energy_mwh * b.cycles_per_day]]
     A_eq = np.concatenate([se * np.ones(n), -np.ones(n) / se])[None, :]  # end empty
     res = linprog(cost, A_ub=np.vstack(A_ub), b_ub=np.concatenate(b_ub), A_eq=A_eq, b_eq=[0],
-                  bounds=[(0, b.power_mw)] * (2 * n), method="highs")
+                  bounds=[(0, b.power_mw * step_h)] * (2 * n), method="highs")
     if not res.success:
         return np.zeros(n)
     c, d = res.x[:n], res.x[n:]
