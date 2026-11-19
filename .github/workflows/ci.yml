@@ -47,3 +47,21 @@ jobs:
       - run: npx eslint .
       - name: Build (type-checks every page against the committed JSON payloads)
         run: npx next build
+
+  pipeline-deps:
+    # The daily forecast installs the full pipeline with the pins in requirements-lock.txt. This job proves that the pinned set
+    # installs on the Linux runner and that every pipeline module imports, before a scheduled run depends on it.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install the pinned pipeline dependencies
+        run: pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt -c requirements-lock.txt
+      - name: Every pipeline module imports
+        run: |
+          python -c "import importlib, pathlib; mods=[p.stem for p in pathlib.Path('src').glob('*.py') if p.stem != '__init__']; [importlib.import_module('src.' + m) for m in mods]; print(len(mods), 'modules ok')"
+          python -c "import torch, lightgbm, sklearn, entsoe, mlflow, shap, optuna; print('ok', torch.__version__, lightgbm.__version__, sklearn.__version__)"

@@ -33,7 +33,8 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: |
-          pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+          # exact versions from requirements-lock.txt (the set the project was tested with); Windows-only pins are ignored on Linux
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt -c requirements-lock.txt
       # Two separate caches, each saved right after its stage, so a timeout in the long retrain never loses the download.
       - name: Restore raw data
         uses: actions/cache/restore@v4
