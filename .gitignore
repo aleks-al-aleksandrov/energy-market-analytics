@@ -26,3 +26,6 @@ INTERVIEW_CONTEXT.md
 
 # large experiment output (regenerate with python -m src.phase1_experiment)
 reports/phase1_predictions.csv
+
+# browser automation logs
+.playwright-mcp/

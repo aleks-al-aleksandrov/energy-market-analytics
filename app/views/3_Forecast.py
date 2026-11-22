@@ -32,7 +32,7 @@ if nd is not None and len(nd):
 with top:
     T.header("Models", "Day-ahead price forecast",
              "Every forecast uses only what is known at gate closure (12:00 CET on D-1). The back-test is walk-forward: each month is predicted by a model trained on earlier data only.",
-             ["Gate-closure information set", "Monthly expanding-window retrain", "Last 3 months = untouched holdout", "Bands: conformal-calibrated"],
+             ["Gate-closure information set", "Weekly retrain · 4-model ensemble", "Last 3 months = final holdout", "Bands: adaptive conformal"],
              headline=(nd_txt + rec_txt).strip())
 
 T.toc([("next-day", "Next day"), ("explorer", "Back-test explorer"), ("failures", "Where it fails"), ("live", "Live track record")])
@@ -153,7 +153,7 @@ lo_c, hi_c = ("q10_cal", "q90_cal") if "q10_cal" in w.columns and w["q10_cal"].n
 mae_sel = {m_: (w["actual"] - w[m_]).abs().mean() for m_ in chosen} if len(w) else {}
 best_sel = min(mae_sel, key=mae_sel.get) if mae_sel else None
 with T.card(f"{T.MODEL_LABEL.get(best_sel, best_sel)} was closest in this {span.lower()} (MAE €{mae_sel[best_sel]:.0f})" if best_sel else "Actual vs predicted",
-            "Holdout period: never used for any model choice" if split == "holdout" else "Walk-forward CV period",
+            "Final holdout: the Aug–Oct 2026 price surge" if split == "holdout" else "Walk-forward CV period",
             T.legend_html([("Actual", T.TEXT)] + [(T.MODEL_LABEL.get(m_, m_), T.MODEL.get(m_, T.MUTED)) for m_ in chosen] + [("10–90 % band", T.rgba(T.ACCENT, .4))])):
     fig = go.Figure()
     if {lo_c, hi_c} <= set(w.columns) and w[lo_c].notna().any():

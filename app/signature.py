@@ -130,7 +130,7 @@ def answer(q: str, nd: pd.DataFrame) -> dict:
             c, h = g.loc["cv"], g.loc["holdout"]
             return dict(hi=set(), hi2=set(),
                         text=(f"On the validation months the model beat the \"same as yesterday\" baseline by <b>{100 * c['skill']:.0f}%</b> "
-                              f"(95% interval {100 * c['skill_lo']:.0f} to {100 * c['skill_hi']:.0f}%). On the untouched last three months the edge shrank to "
+                              f"(95% interval {100 * c['skill_lo']:.0f} to {100 * c['skill_hi']:.0f}%). On the last three months (a price surge) the edge shrank to "
                               f"<b>{100 * h['skill']:.0f}%</b> (interval {100 * h['skill_lo']:.0f} to {100 * h['skill_hi']:.0f}%), which includes zero. "
                               f"So treat the shape of the day as reliable and the exact level with care."))
     return dict(hi=set(), hi2=set(), text="Skill statistics are not available yet.")

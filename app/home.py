@@ -78,7 +78,7 @@ with st.container(key="homecards"):
 T.section("How it works", "From raw market data to a decision, in four steps", anchor="how")
 steps = [("01", "Collect", "Prices, load, wind and solar forecasts, flows and weather from ENTSO-E and Open-Meteo."),
          ("02", "Forecast", "Models that only use what is known at 12:00 on the day before delivery."),
-         ("03", "Test", "Walk-forward back-test plus a final three months that were never used to choose anything."),
+         ("03", "Test", "A walk-forward back-test over 25 months, a final three-month check, and a live record scored every day."),
          ("04", "Value", "Settle a battery schedule at the real prices to see what the forecast is worth.")]
 st.markdown("<div class='flow'>" + "<span class='arrow'>→</span>".join(
     f"<div class='step'><div class='n'>{n}</div><div class='t'>{tr(t)}</div><div class='d'>{tr(d)}</div></div>" for n, t, d in steps) + "</div>", unsafe_allow_html=True)
@@ -90,7 +90,7 @@ if sc is not None:
     g = sc[sc["variant"] == "lightgbm"].set_index("split")
     if {"cv", "holdout"} <= set(g.index):
         c, h = g.loc["cv"], g.loc["holdout"]
-        hold = (f"On the validation months the model beat the naive baseline by <b>{100 * c['skill']:.0f}%</b>; on the untouched last three months the "
+        hold = (f"On the validation months the model beat the naive baseline by <b>{100 * c['skill']:.0f}%</b>; on the last three months (a price surge) the "
                 f"edge shrank to <b>{100 * h['skill']:.0f}%</b> and its interval ({100 * h['skill_lo']:.0f} to {100 * h['skill_hi']:.0f}%) includes zero.")
 k1, k2, k3 = st.columns(3)
 with k1:

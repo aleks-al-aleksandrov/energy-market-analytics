@@ -101,7 +101,9 @@ MODEL_LABEL = {"naive_d1": "Naive · yesterday", "naive_w1": "Naive · last week
                "lightgbm": "LightGBM", "lightgbm_level": "LightGBM · level-adj.", "lightgbm_blend": "Blend",
                "lightgbm_nofuel": "LightGBM · no fuel prices", "lightgbm_fuels": "LightGBM · + fuel prices",
                "lightgbm_nocapacity": "LightGBM · no capacity (NTC)", "lightgbm_capacity": "LightGBM · + capacity (NTC)",
-               "mlp": "Neural net (MLP)", "ensemble": "Ensemble", "actual": "Actual"}
+               "mlp": "Neural net (MLP)", "ensemble": "Ensemble", "actual": "Actual",
+               "lightgbm_guarded": "LightGBM · guarded switch", "lightgbm_linbase": "Ridge + tree on residual",
+               "lightgbm_recency": "LightGBM · recency-weighted", "lightgbm_levelshape": "Level + shape model"}
 # generation technologies folded to <= 8 groups, stacked bottom -> top in an order that passes the adjacent-pair CVD checks
 GEN_ORDER = ["Nuclear", "Lignite", "Hydro", "Gas", "Solar", "Wind", "Other"]
 GEN_LABEL = {"nuclear": "Nuclear", "fossil_brown_coal_lignite": "Lignite", "fossil_gas": "Gas", "fossil_hard_coal": "Hard coal",

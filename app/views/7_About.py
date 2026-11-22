@@ -19,7 +19,7 @@ steps = [("01", "Ingest", "ENTSO-E prices, load, wind/solar forecasts, generatio
          ("02", "Clean", "UTC index · 15-min → hourly mean · gaps ≤ 3 h interpolated · negative prices kept & flagged"),
          ("03", "Features", "Only what is known at 12:00 CET on D-1: price lags, neighbours D-1, ENTSO-E forecasts, D-1 weather, calendar"),
          ("04", "Models", "Naive ×2 · Ridge · LightGBM (Optuna) · MLP · ensemble · quantiles · spike classifier"),
-         ("05", "Evaluate", "Expanding-window walk-forward · 3-month untouched holdout · MAE, skill, Diebold-Mariano"),
+         ("05", "Evaluate", "Expanding-window walk-forward · 3-month final holdout · MAE, skill, Diebold-Mariano"),
          ("06", "Value", "Battery LP settled at actual prices · SHAP · drift monitoring · next-day forecast")]
 st.markdown("<div class='flow'>" + "<span class='arrow'>→</span>".join(
     f"<div class='step'><div class='n'>{n}</div><div class='t'>{tr(t)}</div><div class='d'>{tr(d)}</div></div>" for n, t, d in steps)
@@ -41,15 +41,18 @@ for Sofia (demand), Dobrich (wind) and Stara Zagora (solar).</li>
 with c2:
     st.markdown("""<div class='info-card'><h3>Forecasting</h3><ul>
 <li>Target: hourly BG day-ahead price for delivery day D, forecast at gate closure (12:00 CET on D-1).</li>
-<li><b>Expanding-window walk-forward</b>: retrain monthly, test on the next month. The last 3 months are a
-<b>final holdout</b> never used for tuning, ensemble weights, thresholds or model choice.</li>
+<li><b>Expanding-window walk-forward</b> over 25 months, then a final 3-month holdout. Every change is adopted only by a rule
+fixed in advance on the walk-forward months. The holdout has been inspected while improving the models, so the
+<b>live track record</b> (forecasts logged before the auction since November 2026) is now the clean test.</li>
+<li>In production: an <b>adaptive ensemble</b> of LightGBM, Ridge, a level-adjusted LightGBM and LEAR, retrained weekly, plus a
+15-minute shape model.</li>
 <li>Metrics: MAE, RMSE, skill vs best naive, Diebold-Mariano, pinball loss and coverage, PR-AUC with a cost-based threshold.</li></ul></div>
 <div class='info-card'><h3>Limitations</h3><ul>
 <li>No hydro reservoir levels. Interconnector capacities, REMIT outages, and fuel and carbon prices (monthly gas, daily TTF, Brent,
 a carbon proxy) were tested and did not improve the forecast (capacity and fuels failed the pre-set CV-only adoption rule, so they are not used). Daily TTF history is only 16 months deep.</li>
 <li>ENTSO-E wind/solar day-ahead forecasts may be published after gate closure (legal deadline 18:00 D-1); treated as
 available because traders hold equivalent vendor forecasts.</li>
-<li>Conformal-calibrated bands reach 80 % coverage on CV but only 68 % on the holdout, where the autumn-2026 surge pushed prices above the band.</li>
+<li>The adaptive band holds 80 % of prices on the walk-forward months and widens itself after misses; the earlier fixed band held only 75 % in the autumn-2026 surge.</li>
 <li>Battery: day-ahead only, price-taker, no network fees or intraday revenue; degradation is a configurable cost and reserve capacity is indicative only.</li>
 <li><b>Design and accessibility:</b> chart colours are a validated colour-blind-safe palette with a fixed order, every chart has a table view and CSV download, text meets WCAG AA contrast, and charts carry screen-reader descriptions.</li></ul></div>""",
                 unsafe_allow_html=True)
