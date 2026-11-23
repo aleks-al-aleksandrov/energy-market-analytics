@@ -2,11 +2,11 @@
   "method": "aci",
   "gamma": 0.05,
   "window_days": 180,
-  "alpha_lo": 0.2036449275362322,
-  "alpha_hi": 0.019999999999999987,
-  "a_lo": -12.03693245475781,
-  "a_hi": 44.64761794789607,
-  "as_of": "2026-11-22",
+  "alpha_lo": 0.2048949275362324,
+  "alpha_hi": 0.024999999999999988,
+  "a_lo": -12.31853112935873,
+  "a_hi": 41.38400604160588,
+  "as_of": "2026-11-23",
   "rule": "adaptive conformal inference; adopted on CV months (coverage within 1 point of 80 %, better worst 30 days)",
-  "live_days_applied": 6
+  "live_days_applied": 7
 }

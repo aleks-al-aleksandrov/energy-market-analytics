@@ -1,6 +1,6 @@
 {
   "variant": "lightgbm",
-  "baseline_cv_mae": 23.14608649667335,
+  "baseline_cv_mae": 23.161234807671462,
   "rule": "replace the baseline only if CV MAE is >= 0.1 lower and Diebold-Mariano p < 0.05 on the CV months",
   "episodes": [
     "2024-07",

@@ -1,11 +1,11 @@
 {
   "months": "2025-08..2026-07",
-  "cv_mae_base": 20.630184952509886,
+  "cv_mae_base": 20.663099143269623,
   "rule": "greedy: adopt a group iff CV MAE (last 12 CV months) improves on the groups adopted so far",
   "use_capacity": false,
-  "cv_mae_without_capacity": 20.630184952509886,
-  "cv_mae_with_capacity": 21.0958571125121,
+  "cv_mae_without_capacity": 20.663099143269623,
+  "cv_mae_with_capacity": 21.068086921620445,
   "use_fuels": false,
-  "cv_mae_without_fuels": 20.630184952509886,
-  "cv_mae_with_fuels": 20.97258643806101
+  "cv_mae_without_fuels": 20.663099143269623,
+  "cv_mae_with_fuels": 21.011777806410603
 }
