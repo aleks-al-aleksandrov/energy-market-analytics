@@ -1,10 +1,10 @@
 {
-  "delivery_day": "2026-11-26",
+  "delivery_day": "2026-11-27",
   "weights": {
-    "lightgbm": 0.1978,
-    "ridge": 0.2191,
-    "level": 0.2662,
-    "lear": 0.3169
+    "lightgbm": 0.1896,
+    "ridge": 0.2253,
+    "level": 0.2781,
+    "lear": 0.307
   },
   "window_days": 14,
   "rule": "weights proportional to 1 / MAE^2 over the last 14 published days"
